@@ -1,5 +1,5 @@
 /* Service worker : rend l'application utilisable sans réseau. */
-var CACHE = "edl-v8";
+var CACHE = "edl-v10";
 var FICHIERS = [
   "./",
   "./index.html",

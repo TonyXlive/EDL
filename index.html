@@ -210,39 +210,40 @@ input:focus,select:focus,textarea:focus{background:#fff}
   .sigs-duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 }
 /* ===== document imprimé ===== */
-#impression{display:none;font-size:11px;color:#000}
+#impression{display:none}
+.doc{font-size:11px;color:#000}
 @media print{
   body{background:#fff}
   .barre,main,.nav,.menu{display:none !important}
   #impression{display:block}
   @page{size:A4;margin:13mm 12mm 20mm}
 }
-#impression h1{font-size:19px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
-#impression h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #000}
-#impression .doc-tete{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end}
-#impression table{width:100%;border-collapse:collapse;margin-bottom:4px}
-#impression th,#impression td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top}
-#impression th{background:#E8EDF3;font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
-#impression .kv td:first-child{width:32%;background:#F4F7FA;font-weight:600}
-#impression .piece-doc{page-break-inside:avoid;margin-bottom:9px}
-#impression tr.baisse td{background:#FBEEEC}
-#impression .quand{font-size:8px;color:#444;margin-top:2px}
-#impression .annexe{page-break-before:always}
-#impression .piece-doc h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:#000;color:#fff;padding:2px 6px;margin:0 0 3px}
-#impression .ph{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 6px}
-#impression .ph figure{margin:0;width:118px}
-#impression .ph img{width:118px;height:88px;object-fit:cover;border:.6px solid #6B7480;display:block}
-#impression .ph figcaption{font-size:7.5px;line-height:1.25;padding-top:1px}
-#impression .sig-doc{display:flex;gap:14px;margin-top:8px;page-break-inside:avoid}
-#impression .sig-doc div{flex:1;border:.6px solid #6B7480;padding:5px;min-height:110px}
-#impression .sig-doc img{max-width:100%;max-height:78px}
-#impression .mentions{margin-top:10px;font-size:8.5px;color:#333;line-height:1.4;border-top:.6px solid #6B7480;padding-top:4px}
-#impression .pied-page{position:fixed;bottom:-14mm;left:0;right:0;display:flex;align-items:flex-end;gap:10px;
+.doc h1{font-size:19px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.doc h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #000}
+.doc .doc-tete{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end}
+.doc table{width:100%;border-collapse:collapse;margin-bottom:4px}
+.doc th,.doc td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top}
+.doc th{background:#E8EDF3;font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
+.doc .kv td:first-child{width:32%;background:#F4F7FA;font-weight:600}
+.doc .piece-doc{page-break-inside:avoid;margin-bottom:9px}
+.doc tr.baisse td{background:#FBEEEC}
+.doc .quand{font-size:8px;color:#444;margin-top:2px}
+.doc .annexe{page-break-before:always}
+.doc .piece-doc h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:#000;color:#fff;padding:2px 6px;margin:0 0 3px}
+.doc .ph{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 6px}
+.doc .ph figure{margin:0;width:118px}
+.doc .ph img{width:118px;height:88px;object-fit:cover;border:.6px solid #6B7480;display:block}
+.doc .ph figcaption{font-size:7.5px;line-height:1.25;padding-top:1px}
+.doc .sig-doc{display:flex;gap:14px;margin-top:8px;page-break-inside:avoid}
+.doc .sig-doc div{flex:1;border:.6px solid #6B7480;padding:5px;min-height:110px}
+.doc .sig-doc img{max-width:100%;max-height:78px}
+.doc .mentions{margin-top:10px;font-size:8.5px;color:#333;line-height:1.4;border-top:.6px solid #6B7480;padding-top:4px}
+.doc .pied-page{position:fixed;bottom:-14mm;left:0;right:0;display:flex;align-items:flex-end;gap:10px;
   border-top:.6px solid #6B7480;padding-top:2px;font-size:8px;color:#333}
-#impression .pied-page div{display:flex;align-items:flex-end;gap:4px}
-#impression .pied-page img{height:11mm;max-width:26mm;object-fit:contain}
-#impression .pied-page .vide{display:inline-block;width:24mm;border-bottom:.6px dotted #6B7480}
-#impression .pied-page .ref{margin-left:auto;text-align:right;font-family:"IBM Plex Mono",monospace}
+.doc .pied-page div{display:flex;align-items:flex-end;gap:4px}
+.doc .pied-page img{height:11mm;max-width:26mm;object-fit:contain}
+.doc .pied-page .vide{display:inline-block;width:24mm;border-bottom:.6px dotted #6B7480}
+.doc .pied-page .ref{margin-left:auto;text-align:right;font-family:"IBM Plex Mono",monospace}
 
 /* ================= finition visuelle ================= */
 :root{
@@ -415,6 +416,61 @@ input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{
 @media(prefers-reduced-motion:reduce){
   .toast,.secoue,.choix.manque .carte-choix{animation:none!important;transition:opacity .01s!important}
 }
+
+/* ================= action finale, remplissage rapide ================= */
+.grand.duo-act{display:flex;flex-direction:column;gap:3px;padding:17px 16px;text-transform:none;letter-spacing:0}
+.grand.duo-act b{font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:17px;
+  text-transform:uppercase;letter-spacing:.06em}
+.grand.duo-act span{font-family:"Public Sans",sans-serif;font-weight:400;font-size:13px;
+  color:rgba(255,255,255,.82);letter-spacing:0}
+
+.rapide{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:#fff;border:1px solid #D9E2ED;
+  border-radius:var(--r);padding:10px 12px;margin-bottom:12px;box-shadow:var(--ombre)}
+.rapide>span{font-family:"Archivo Narrow",sans-serif;font-weight:600;text-transform:uppercase;
+  letter-spacing:.06em;font-size:11px;color:var(--encre2);flex:1;min-width:150px}
+.rapide button{border:1px solid var(--trait);background:#fff;border-radius:8px;padding:8px 13px;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:12.5px;color:var(--encre2);
+  text-transform:uppercase;letter-spacing:.04em;transition:all .15s}
+.rapide button[data-v=N]:hover{background:var(--neuf);color:#fff;border-color:var(--neuf)}
+.rapide button[data-v=B]:hover{background:var(--bon);color:#fff;border-color:var(--bon)}
+.rapide button[data-v=U]:hover{background:var(--usage);color:#fff;border-color:var(--usage)}
+.rapide button:active{transform:scale(.96)}
+
+/* transition entre étapes */
+#ecran{animation:entree .24s cubic-bezier(.25,.85,.35,1)}
+@keyframes entree{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.tete-pas{animation:entree .3s cubic-bezier(.25,.85,.35,1)}
+@media(prefers-reduced-motion:reduce){#ecran,.tete-pas{animation:none}}
+
+/* ================= aperçu du document ================= */
+body.fige{overflow:hidden}
+.apercu{position:fixed;inset:0;z-index:60;background:rgba(12,20,35,.55);backdrop-filter:blur(3px);
+  display:none;flex-direction:column}
+.apercu.vu{display:flex;animation:fondu .18s ease}
+@keyframes fondu{from{opacity:0}to{opacity:1}}
+.apercu-barre{display:flex;align-items:center;gap:12px;background:linear-gradient(180deg,#1B2C4B,#111D33);
+  color:#fff;padding:11px 14px calc(11px);box-shadow:0 6px 20px -12px #000;flex:none}
+.apercu-barre span{flex:1;text-align:center;font-family:"Archivo Narrow",sans-serif;font-weight:600;
+  text-transform:uppercase;letter-spacing:.1em;font-size:13px}
+.apercu-barre button{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;
+  border-radius:9px;padding:9px 14px;font-family:"Archivo Narrow",sans-serif;font-weight:700;
+  text-transform:uppercase;letter-spacing:.05em;font-size:13px;transition:background .15s}
+.apercu-barre button:hover{background:rgba(255,255,255,.12)}
+.apercu-barre button.ok{background:linear-gradient(180deg,#5C3AA0,#4B2E83);border-color:transparent}
+.apercu-corps{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding:18px 14px 40px}
+.doc.feuille{background:#fff;max-width:800px;margin:0 auto;padding:26px 24px;border-radius:6px;
+  box-shadow:0 30px 60px -30px rgba(0,0,0,.7);font-size:13px}
+@media(min-width:760px){.doc.feuille{padding:38px 42px;font-size:13.5px}}
+.doc.feuille .pied-page{position:static;bottom:auto;margin-top:18px;font-size:10px}
+.doc.feuille .pied-page img{height:14mm}
+.doc.feuille .annexe{page-break-before:auto;margin-top:22px;border-top:2px solid #000;padding-top:12px}
+.doc.feuille h2{font-size:13px;margin-top:20px}
+.doc.feuille h1{font-size:21px}
+.doc.feuille th,.doc.feuille td{padding:5px 7px}
+.doc.feuille .ph figure{width:150px}
+.doc.feuille .ph img{width:150px;height:112px}
+.grand.relire{margin-bottom:6px}
+@media print{.apercu{display:none !important}}
 </style>
 </head>
 <body>
@@ -430,7 +486,8 @@ input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{
     <button data-act="sauver"><span>💾</span>Enregistrer le fichier</button>
     <button data-act="ouvrir"><span>📂</span>Ouvrir un état des lieux</button>
     <button data-act="sortie"><span>📦</span>Créer la sortie à partir de l'entrée</button>
-    <button data-act="imprimer"><span>🖨️</span>Imprimer / enregistrer en PDF</button>
+    <button data-act="imprimer"><span>🖨️</span>Terminer : sauvegarde + PDF</button>
+    <button data-act="apercu"><span>👁️</span>Aperçu du document</button>
     <button data-act="recap"><span>✅</span>Aller au récapitulatif</button>
     <button data-act="vider"><span>🗑️</span>Tout effacer et recommencer</button>
   </div>
@@ -457,7 +514,16 @@ input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{
   </div>
 </nav>
 
-<div id="impression"></div>
+<div class="apercu" id="apercu" role="dialog" aria-modal="true" aria-label="Aperçu du document">
+  <div class="apercu-barre">
+    <button id="apercu-fermer">← Modifier</button>
+    <span>Aperçu du document</span>
+    <button id="apercu-ok" class="ok">Terminer</button>
+  </div>
+  <div class="apercu-corps"><div class="doc feuille" id="apercu-doc"></div></div>
+</div>
+
+<div id="impression" class="doc"></div>
 <input type="file" id="fichier-json" accept=".json" style="display:none">
 
 <script>
@@ -1016,6 +1082,25 @@ function vPiece(b, e){
     "<span>" + faits + " / " + p.elements.length + "</span>";
   b.appendChild(jp);
 
+  var vides = p.elements.filter(function(z){ return !z.etat; }).length;
+  if(vides){
+    var rap = document.createElement("div");
+    rap.className = "rapide";
+    rap.innerHTML = "<span>Compléter les " + vides + " restants en :</span>";
+    [["N","Neuf"],["B","Bon"],["U","Usage"]].forEach(function(o){
+      var t = document.createElement("button");
+      t.setAttribute("data-v", o[0]);
+      t.textContent = o[1];
+      t.addEventListener("click", function(){
+        p.elements.forEach(function(z){ if(!z.etat) z.etat = o[0]; });
+        dessine(); touche();
+        signale(vides + " élément(s) notés « " + o[1] + " ». Modifie ensuite les exceptions.");
+      });
+      rap.appendChild(t);
+    });
+    b.appendChild(rap);
+  }
+
   var tete = document.createElement("div");
   tete.className = "bloc-blanc";
   tete.innerHTML = '<label class="champ"><span>Nom de la pièce</span><input type="text"></label>';
@@ -1230,6 +1315,17 @@ function vFinal(b){
   cb.addEventListener("change", function(){ S.vetuste = cb.checked; touche(); });
   b.appendChild(bv);
 
+  var ba = document.createElement("button");
+  ba.className = "grand secondaire relire";
+  ba.innerHTML = "👁️  Relire le document avec le locataire";
+  ba.addEventListener("click", apercu);
+  b.appendChild(ba);
+  var na = document.createElement("p");
+  na.className = "note";
+  na.style.margin = "-4px 0 16px";
+  na.textContent = "À faire avant de signer : le locataire doit avoir vu ce qu'il signe.";
+  b.appendChild(na);
+
   if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
   var lp = document.createElement("div");
   lp.className = "avant-lab";
@@ -1351,17 +1447,17 @@ function vRecap(b){
     b.appendChild(pw);
   }
 
-  var g1 = document.createElement("button");
-  g1.className = "grand";
-  g1.innerHTML = "🖨️  Imprimer / enregistrer en PDF";
-  g1.addEventListener("click", imprimer);
-  b.appendChild(g1);
+  var g0 = document.createElement("button");
+  g0.className = "grand secondaire";
+  g0.innerHTML = "👁️  Aperçu du document";
+  g0.addEventListener("click", apercu);
+  b.appendChild(g0);
 
-  var g2 = document.createElement("button");
-  g2.className = "grand secondaire";
-  g2.innerHTML = "💾  Enregistrer le fichier (.json)";
-  g2.addEventListener("click", sauver);
-  b.appendChild(g2);
+  var g1 = document.createElement("button");
+  g1.className = "grand duo-act";
+  g1.innerHTML = "<b>Terminer l'état des lieux</b><span>💾 sauvegarde .json  +  🖨️ PDF, en une fois</span>";
+  g1.addEventListener("click", terminer);
+  b.appendChild(g1);
 
   if(S.type === "entree"){
     var g3 = document.createElement("button");
@@ -1373,15 +1469,12 @@ function vRecap(b){
 
   var n2 = document.createElement("p");
   n2.className = "note";
-  n2.innerHTML = "Dans la fenêtre d'impression, choisis <strong>Enregistrer au format PDF</strong> comme destination. Conserve aussi le fichier .json : c'est lui qui permettra de générer la sortie plus tard.";
+  n2.innerHTML = "Un seul geste : le fichier <strong>.json</strong> est téléchargé, puis la fenêtre d'impression s'ouvre — choisis <strong>Enregistrer au format PDF</strong> comme destination. Les deux portent le même nom. Le PDF est pour les parties, le .json sert à générer la sortie le jour du départ.";
   b.appendChild(n2);
 }
 
 /* ================= fichier ================= */
-function nomFichier(){
-  var v = (S.ville || S.adresse || "logement").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 28);
-  return "EDL-" + (S.type === "sortie" ? "sortie" : "entree") + "-" + v + "-" + S.date + ".json";
-}
+function nomFichier(){ return nomDoc() + ".json"; }
 function sauver(){
   sauvegarde = true;
   var a = document.createElement("a");
@@ -1544,14 +1637,46 @@ function docHTML(emp){
     '<div class="ref">' + esc(S.adresse || "") + ' — ' + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
   return h;
 }
+function nomDoc(){
+  var v = (S.ville || S.adresse || "logement").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 28);
+  return "EDL-" + (S.type === "sortie" ? "sortie" : "entree") + "-" + v + "-" + S.date;
+}
 function imprimer(){
   empreinte(function(emp){
     el("#impression").innerHTML = docHTML(emp);
-    setTimeout(function(){ window.print(); }, 120);
+    var titre = document.title;
+    document.title = nomDoc();
+    setTimeout(function(){
+      window.print();
+      setTimeout(function(){ document.title = titre; }, 1500);
+    }, 120);
   });
+}
+function apercu(){
+  el("#apercu-doc").innerHTML = docHTML("");
+  el("#apercu").classList.add("vu");
+  document.body.classList.add("fige");
+  el("#apercu").scrollTop = 0;
+  var c = el(".apercu-corps");
+  if(c) c.scrollTop = 0;
+}
+function fermeApercu(){
+  el("#apercu").classList.remove("vu");
+  document.body.classList.remove("fige");
+}
+function terminer(){
+  sauver();
+  var manque = !S.signatures.bailleur || !S.signatures.locataire;
+  signale(manque
+    ? "Fichier enregistré. Attention : il manque une signature — la fenêtre d'impression s'ouvre."
+    : "Fichier .json enregistré. La fenêtre d'impression s'ouvre : choisis « Enregistrer au format PDF ».");
+  setTimeout(imprimer, 1100);
 }
 
 /* ================= navigation et menu ================= */
+el("#apercu-fermer").addEventListener("click", fermeApercu);
+el("#apercu-ok").addEventListener("click", function(){ fermeApercu(); setTimeout(terminer, 150); });
+document.addEventListener("keydown", function(e){ if(e.key === "Escape") fermeApercu(); });
 el("#btn-suivant").addEventListener("click", suivant);
 el("#btn-retour").addEventListener("click", function(){ allerA(pas-1); });
 el("#menu-btn").addEventListener("click", function(e){ e.stopPropagation(); el("#menu").classList.toggle("ouvert"); });
@@ -1563,7 +1688,8 @@ els("#menu button").forEach(function(b){
     if(a === "sauver") sauver();
     else if(a === "ouvrir"){ attenteSortie = false; el("#fichier-json").click(); }
     else if(a === "sortie") versSortie();
-    else if(a === "imprimer") imprimer();
+    else if(a === "imprimer") terminer();
+    else if(a === "apercu") apercu();
     else if(a === "recap") allerA(etapes().length - 1);
     else if(a === "vider"){ if(confirm("Effacer toutes les données saisies ?")){ S = neuf(); allerA(0); } }
   });
@@ -1598,6 +1724,7 @@ window.addEventListener("beforeprint", function(){ if(!el("#impression").innerHT
     if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
               if(!S.horodatage) S.horodatage = {bailleur:"", locataire:""};
               S.pieces.forEach(function(p){ p.elements.forEach(function(e){ if(!e.photos) e.photos = []; }); });
+              if(S.adresse || S.pieces.length) setTimeout(function(){ signale("Brouillon repris là où tu t'étais arrêté."); }, 600);
             }
           }catch(e){}
         }
