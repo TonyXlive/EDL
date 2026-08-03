@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15233B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="État des lieux">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icone-192.png">
+<title>État des lieux — entrée &amp; sortie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --papier:#E9EDF2; --carte:#FFFFFF; --encre:#15233B; --encre2:#53637C;
+  --champ:#EAF0F7; --trait:#C2CEDD; --tampon:#4B2E83;
+  --neuf:#0F6B4F; --bon:#5E8C2A; --usage:#B4761A; --mauvais:#A32A1F; --so:#78859A;
+  --r:5px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;min-height:100%}
+body{background:var(--papier);color:var(--encre);font-family:"Public Sans",system-ui,sans-serif;font-size:15.5px;line-height:1.5;-webkit-text-size-adjust:100%}
+h1,h2,h3{margin:0;font-family:"Archivo Narrow",system-ui,sans-serif;font-weight:700}
+button{font:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--tampon);outline-offset:2px}
+
+/* ===== barre haute ===== */
+.barre{position:sticky;top:0;z-index:30;background:var(--encre);color:#fff}
+.barre-in{max-width:600px;margin:0 auto;padding:11px 16px;display:flex;align-items:center;gap:10px}
+.barre h1{font-size:15px;text-transform:uppercase;letter-spacing:.09em;font-weight:600}
+.barre .marque{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#8EA3C0;margin-left:auto}
+.menu-btn{background:none;border:1px solid #46587A;color:#fff;border-radius:var(--r);padding:5px 9px;line-height:1;font-size:17px}
+.menu{position:absolute;right:16px;top:52px;background:#fff;border:1px solid var(--trait);border-radius:var(--r);box-shadow:0 8px 24px rgba(21,35,59,.18);overflow:hidden;display:none;min-width:220px}
+.menu.ouvert{display:block}
+.menu button{display:block;width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid #EDF1F6;padding:11px 14px;color:var(--encre);font-size:14.5px}
+.menu button:last-child{border-bottom:0}
+.menu button:hover{background:#F2F6FB}
+.jauge-pas{height:4px;background:#22344F}
+.jauge-pas div{height:100%;background:var(--tampon);transition:width .3s ease}
+@media(prefers-reduced-motion:reduce){.jauge-pas div{transition:none}}
+
+/* ===== écran ===== */
+main{max-width:600px;margin:0 auto;padding:20px 16px 130px}
+.compte-pas{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--encre2);letter-spacing:.04em;margin-bottom:6px}
+.titre-pas{font-size:23px;line-height:1.22;margin-bottom:4px}
+.sous-pas{color:var(--encre2);font-size:14px;margin:0 0 20px}
+
+/* ===== gros choix ===== */
+.choix{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:8px}
+.choix.trois{grid-template-columns:repeat(3,1fr)}
+.carte-choix{
+  background:var(--carte);border:1.5px solid var(--trait);border-radius:var(--r);
+  padding:22px 10px;display:flex;flex-direction:column;align-items:center;gap:9px;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:15px;
+  text-transform:uppercase;letter-spacing:.05em;color:var(--encre);
+}
+.carte-choix svg{width:30px;height:30px;stroke:var(--encre2);fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.carte-choix:hover{border-color:var(--encre2)}
+.carte-choix[aria-pressed=true]{background:var(--encre);color:#fff;border-color:var(--encre)}
+.carte-choix[aria-pressed=true] svg{stroke:#fff}
+
+/* ===== champs ===== */
+.pile{display:flex;flex-direction:column;gap:13px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+@media(max-width:460px){.duo{grid-template-columns:1fr}}
+label.champ{display:flex;flex-direction:column;gap:5px}
+label.champ>span{font-family:"Archivo Narrow",sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.07em;font-size:11.5px;color:var(--encre2)}
+input[type=text],input[type=date],input[type=email],input[type=tel],select,textarea{
+  background:var(--champ);border:1px solid var(--trait);border-bottom:2px solid #9FB0C6;
+  border-radius:3px;padding:11px 10px;width:100%;
+}
+textarea{resize:vertical;min-height:110px}
+input:focus,select:focus,textarea:focus{background:#fff}
+.bloc-blanc{background:var(--carte);border:1px solid var(--trait);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.bloc-blanc h3{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--encre2);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.bloc-blanc h3 .sup{margin-left:auto}
+.ajout{background:#fff;border:1.5px dashed var(--tampon);color:var(--tampon);border-radius:var(--r);padding:11px 14px;width:100%;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13.5px}
+.ajout:hover{background:#F3EFFA}
+.sup{background:#fff;border:1px solid var(--trait);color:var(--mauvais);border-radius:3px;padding:5px 9px;font-weight:700;line-height:1}
+.sup:hover{background:#FBEDEC}
+.note{font-size:13px;color:var(--encre2);line-height:1.55}
+.note strong{color:var(--encre)}
+
+/* ===== compteur ===== */
+.face-lab{font-family:"Archivo Narrow",sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--encre2);margin:10px 0 4px}
+.face{background:#11161F;border-radius:3px;padding:9px 11px;display:flex;align-items:center;gap:8px;box-shadow:inset 0 2px 6px rgba(0,0,0,.6)}
+.face input{background:transparent;border:0;font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600;color:#F2C14E;letter-spacing:.24em;padding:0;width:100%}
+.face input:focus{background:transparent;color:#FFD877;outline:none}
+.face .unite{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#7E8CA3;flex:none}
+
+/* ===== composition ===== */
+.ligne-piece{display:flex;align-items:center;gap:10px;background:var(--carte);border:1px solid var(--trait);border-radius:var(--r);padding:10px 12px;margin-bottom:8px}
+.ligne-piece b{font-family:"Archivo Narrow",sans-serif;font-weight:600;font-size:15px;flex:1}
+.pas-a-pas{display:flex;align-items:center;gap:0;border:1px solid var(--trait);border-radius:4px;overflow:hidden}
+.pas-a-pas button{background:#fff;border:0;width:40px;height:38px;font-size:19px;line-height:1;color:var(--encre)}
+.pas-a-pas button:hover{background:#EEF3F9}
+.pas-a-pas span{width:34px;text-align:center;font-family:"IBM Plex Mono",monospace;font-weight:600;border-left:1px solid var(--trait);border-right:1px solid var(--trait);height:38px;line-height:38px}
+
+/* ===== élément d'une pièce ===== */
+.elt{background:var(--carte);border:1px solid var(--trait);border-radius:var(--r);padding:12px;margin-bottom:10px}
+.elt.fait{border-left:4px solid var(--neuf)}
+.elt.fait[data-e=M]{border-left-color:var(--mauvais)}
+.elt.fait[data-e=U]{border-left-color:var(--usage)}
+.elt.fait[data-e=B]{border-left-color:var(--bon)}
+.elt.fait[data-e=S]{border-left-color:var(--so)}
+.elt-tete{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.elt-tete b{font-family:"Archivo Narrow",sans-serif;font-weight:600;font-size:15.5px;flex:1}
+.rappel{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--encre2);display:block;font-weight:400;letter-spacing:0}
+.notes{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:9px}
+.notes button{
+  border:1.5px solid var(--trait);background:#fff;border-radius:4px;padding:9px 2px;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;font-size:12px;color:var(--encre2);
+  text-transform:uppercase;letter-spacing:.02em;line-height:1.15;
+}
+.notes button:hover{border-color:var(--encre2)}
+.notes button[aria-pressed=true]{color:#fff;border-color:transparent}
+.notes button[data-v=N][aria-pressed=true]{background:var(--neuf)}
+.notes button[data-v=B][aria-pressed=true]{background:var(--bon)}
+.notes button[data-v=U][aria-pressed=true]{background:var(--usage)}
+.notes button[data-v=M][aria-pressed=true]{background:var(--mauvais)}
+.notes button[data-v=S][aria-pressed=true]{background:var(--so)}
+.elt input.com{background:#F6F9FC;border:1px solid var(--trait);border-bottom:2px solid #9FB0C6;border-radius:3px;padding:9px;width:100%;font-size:14px}
+.photo-btn{display:inline-flex;align-items:center;gap:7px;margin-top:9px;background:#fff;border:1px solid var(--trait);border-radius:4px;padding:8px 12px;
+  font-family:"Archivo Narrow",sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:12.5px;color:var(--encre)}
+.photo-btn:hover{background:#F2F6FB}
+.photo-btn svg{width:17px;height:17px;stroke:var(--tampon);fill:none;stroke-width:1.7}
+.photo-btn input{display:none}
+.photos{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
+.photo{position:relative;width:78px;height:78px;border:1px solid var(--trait);border-radius:3px;overflow:hidden}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo button{position:absolute;top:2px;right:2px;background:rgba(255,255,255,.92);border:1px solid var(--trait);border-radius:3px;line-height:1;padding:2px 5px;color:var(--mauvais);font-weight:700;font-size:12px}
+
+/* ===== signatures ===== */
+.sig{background:var(--carte);border:1px solid var(--trait);border-radius:var(--r);padding:12px;margin-bottom:12px}
+.sig canvas{width:100%;height:140px;background:#fff;border:1px dashed var(--trait);border-radius:3px;touch-action:none;display:block}
+.sig-tete{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.sig-tete span{font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;letter-spacing:.07em;font-size:11.5px;color:var(--encre2)}
+.sig-tete button{margin-left:auto;background:none;border:0;color:var(--tampon);font-size:13px;text-decoration:underline;padding:0}
+
+/* ===== récapitulatif ===== */
+.recap{background:var(--carte);border:1px solid var(--trait);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+.recap button{display:flex;width:100%;gap:10px;align-items:center;background:#fff;border:0;border-bottom:1px solid #EDF1F6;padding:12px 14px;text-align:left;color:var(--encre);font-size:14.5px}
+.recap button:last-child{border-bottom:0}
+.recap button:hover{background:#F2F6FB}
+.recap .st{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--encre2);white-space:nowrap}
+.recap .st.ko{color:var(--mauvais)}
+.grand{background:var(--tampon);color:#fff;border:0;border-radius:var(--r);padding:15px;width:100%;
+  font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:15px;margin-bottom:10px}
+.grand:hover{background:#5C3A9C}
+.grand.secondaire{background:#fff;color:var(--encre);border:1.5px solid var(--trait)}
+.grand.secondaire:hover{background:#F2F6FB}
+
+/* ===== navigation basse ===== */
+.nav{position:fixed;left:0;right:0;bottom:0;background:rgba(233,237,242,.94);backdrop-filter:blur(6px);border-top:1px solid var(--trait);z-index:25}
+.nav-in{max-width:600px;margin:0 auto;padding:11px 16px calc(11px + env(safe-area-inset-bottom));display:flex;gap:10px}
+.nav button{flex:1;border-radius:var(--r);padding:13px;font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14.5px}
+.retour{background:#fff;border:1.5px solid var(--trait);color:var(--encre)}
+.retour:hover{background:#F2F6FB}
+.suivant{background:var(--tampon);border:0;color:#fff;flex:1.6}
+.suivant:hover{background:#5C3A9C}
+.retour[hidden],.suivant[hidden]{display:none}
+
+/* ===== état à l'entrée (mode sortie) ===== */
+.avant{background:#F4F7FB;border:1px solid #DCE5EF;border-radius:4px;padding:9px;margin-bottom:10px}
+.avant-lab{font-family:"Archivo Narrow",sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:.07em;font-size:10.5px;color:var(--encre2);margin-bottom:5px}
+.mini{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-bottom:6px}
+.mini button{border:1px solid var(--trait);background:#fff;border-radius:3px;padding:7px 2px;font-family:"Archivo Narrow",sans-serif;font-weight:600;font-size:11.5px;color:var(--encre2)}
+.mini button[aria-pressed=true]{background:var(--encre2);color:#fff;border-color:var(--encre2)}
+.avant input{width:100%;background:#fff;border:1px solid var(--trait);border-radius:3px;padding:8px;font-size:13.5px}
+.face.petite input{font-size:17px;color:#A9B6C9;letter-spacing:.2em}
+.carte-choix em{font-family:"Public Sans",sans-serif;font-style:normal;font-weight:400;font-size:12.5px;
+  text-transform:none;letter-spacing:0;color:var(--encre2);line-height:1.35;text-align:center}
+.carte-choix[aria-pressed=true] em{color:#C3D0E4}
+.photo-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.photo-actions .photo-btn{margin-top:0;flex:1;justify-content:center}
+.photo-btn.secondaire{color:var(--encre2)}
+.photo-btn.secondaire svg{stroke:var(--encre2)}
+.paraphe-pad canvas{height:80px}
+@media(min-width:760px){.paraphe-pad canvas{height:100px}}
+/* ===== tablette ===== */
+.grille-elts{display:grid;gap:11px}
+.grille-elts .elt{margin-bottom:0}
+@media(min-width:760px){
+  .barre-in,main,.nav-in{max-width:880px}
+  main{padding:26px 22px 132px}
+  .titre-pas{font-size:27px}
+  body{font-size:16.5px}
+  .grille-elts{grid-template-columns:1fr 1fr;align-items:start}
+  .choix{grid-template-columns:repeat(2,1fr);gap:16px}
+  .choix.trois{grid-template-columns:repeat(3,1fr)}
+  .carte-choix{padding:30px 12px;font-size:16px}
+  .carte-choix svg{width:36px;height:36px}
+  .notes button{padding:13px 2px;font-size:13px}
+  .photo-btn{padding:11px 16px;font-size:13.5px}
+  .photo{width:92px;height:92px}
+  .nav button{padding:16px;font-size:15.5px}
+  .sig canvas{height:190px}
+  .pas-a-pas button{width:52px;height:46px;font-size:22px}
+  .pas-a-pas span{width:44px;height:46px;line-height:46px}
+  input[type=text],input[type=date],select,textarea{padding:13px 12px}
+}
+@media(min-width:760px) and (orientation:landscape){
+  .sigs-duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+}
+/* ===== document imprimé ===== */
+#impression{display:none;font-size:11px;color:#000}
+@media print{
+  body{background:#fff}
+  .barre,main,.nav,.menu{display:none !important}
+  #impression{display:block}
+  @page{size:A4;margin:13mm 12mm 20mm}
+}
+#impression h1{font-size:19px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+#impression h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #000}
+#impression .doc-tete{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end}
+#impression table{width:100%;border-collapse:collapse;margin-bottom:4px}
+#impression th,#impression td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top}
+#impression th{background:#E8EDF3;font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
+#impression .kv td:first-child{width:32%;background:#F4F7FA;font-weight:600}
+#impression .piece-doc{page-break-inside:avoid;margin-bottom:9px}
+#impression tr.baisse td{background:#FBEEEC}
+#impression .quand{font-size:8px;color:#444;margin-top:2px}
+#impression .annexe{page-break-before:always}
+#impression .piece-doc h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:#000;color:#fff;padding:2px 6px;margin:0 0 3px}
+#impression .ph{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 6px}
+#impression .ph figure{margin:0;width:118px}
+#impression .ph img{width:118px;height:88px;object-fit:cover;border:.6px solid #6B7480;display:block}
+#impression .ph figcaption{font-size:7.5px;line-height:1.25;padding-top:1px}
+#impression .sig-doc{display:flex;gap:14px;margin-top:8px;page-break-inside:avoid}
+#impression .sig-doc div{flex:1;border:.6px solid #6B7480;padding:5px;min-height:110px}
+#impression .sig-doc img{max-width:100%;max-height:78px}
+#impression .mentions{margin-top:10px;font-size:8.5px;color:#333;line-height:1.4;border-top:.6px solid #6B7480;padding-top:4px}
+#impression .pied-page{position:fixed;bottom:-14mm;left:0;right:0;display:flex;align-items:flex-end;gap:10px;
+  border-top:.6px solid #6B7480;padding-top:2px;font-size:8px;color:#333}
+#impression .pied-page div{display:flex;align-items:flex-end;gap:4px}
+#impression .pied-page img{height:11mm;max-width:26mm;object-fit:contain}
+#impression .pied-page .vide{display:inline-block;width:24mm;border-bottom:.6px dotted #6B7480}
+#impression .pied-page .ref{margin-left:auto;text-align:right;font-family:"IBM Plex Mono",monospace}
+
+/* ================= finition visuelle ================= */
+:root{
+  --papier:#EBEFF5; --carte:#FFFFFF; --encre:#111D33; --encre2:#5A6A82;
+  --champ:#EDF2F8; --trait:#CFD9E6; --tampon:#4B2E83; --r:10px;
+  --ombre:0 1px 2px rgba(17,29,51,.05), 0 14px 28px -22px rgba(17,29,51,.55);
+}
+body{background:radial-gradient(1100px 620px at 50% -8%, #F8FAFD, var(--papier)) fixed}
+
+.barre{background:linear-gradient(180deg,#1B2C4B 0%,#111D33 100%);border-bottom:0;box-shadow:0 6px 22px -18px #000}
+.barre h1{font-size:14px;letter-spacing:.16em;font-weight:600}
+.barre .marque{letter-spacing:.14em;color:#93A8C6}
+.menu-btn{border-color:rgba(255,255,255,.22);border-radius:8px;padding:6px 10px;transition:background .15s}
+.menu-btn:hover{background:rgba(255,255,255,.1)}
+.jauge-pas{height:5px;background:rgba(255,255,255,.09)}
+.jauge-pas div{background:linear-gradient(90deg,#7A57C9,#4B2E83)}
+.menu{border-radius:12px;box-shadow:0 18px 40px -18px rgba(17,29,51,.55);top:56px}
+.menu button{padding:12px 15px}
+
+.compte-pas{display:inline-block;background:#fff;border:1px solid var(--trait);border-radius:999px;
+  padding:3px 12px;margin-bottom:11px;letter-spacing:.09em;box-shadow:var(--ombre)}
+.titre-pas{font-size:25px;letter-spacing:-.005em}
+@media(min-width:760px){.titre-pas{font-size:29px}}
+.sous-pas{margin-bottom:22px;max-width:48ch}
+
+.bloc-blanc,.elt,.sig,.recap,.ligne-piece,.compteur{border-color:#D9E2ED;border-radius:var(--r);box-shadow:var(--ombre)}
+.bloc-blanc h3{font-size:12px;letter-spacing:.09em}
+
+.carte-choix{border-radius:14px;box-shadow:var(--ombre);gap:11px;
+  transition:transform .12s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease}
+.carte-choix:hover{transform:translateY(-1px);box-shadow:0 2px 4px rgba(17,29,51,.06), 0 22px 34px -24px rgba(17,29,51,.7)}
+.carte-choix:active{transform:scale(.985)}
+.carte-choix[aria-pressed=true]{background:linear-gradient(180deg,#1B2C4B,#111D33);box-shadow:0 16px 30px -20px rgba(17,29,51,.95)}
+
+input[type=text],input[type=date],input[type=number],select,textarea{border-radius:7px;border-bottom-width:1px;
+  transition:border-color .15s, background .15s, box-shadow .15s}
+input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{
+  border-color:var(--tampon);box-shadow:0 0 0 3px rgba(75,46,131,.12);outline:none}
+
+.notes button{border-radius:8px;padding:12px 2px;transition:transform .1s, box-shadow .15s, background .15s}
+.notes button:active{transform:scale(.96)}
+.notes button[aria-pressed=true]{box-shadow:0 8px 16px -10px rgba(17,29,51,.9)}
+.mini button{border-radius:7px}
+
+.elt{border-left:4px solid #E2E9F2;transition:border-color .2s}
+.elt-tete b{letter-spacing:.005em}
+.elt input.nb{width:52px;flex:none;background:#F4F8FC;border:1px solid var(--trait);border-radius:7px;
+  padding:7px 6px;font-family:"IBM Plex Mono",monospace;font-size:13px;text-align:center}
+.elt input.com{border-radius:7px}
+.photo-btn{border-radius:9px;transition:background .15s, border-color .15s}
+.photo{border-radius:8px}
+.photo .ts{position:absolute;left:0;right:0;bottom:0;background:rgba(15,20,29,.78);color:#F2C14E;
+  font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:-.02em;padding:2px 3px;text-align:center;line-height:1.2}
+
+.avancement{background:#E7EDF6;border-radius:999px;padding:3px 9px;color:var(--encre2)}
+.piece-tete{border-radius:var(--r) var(--r) 0 0}
+
+.bascule{display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14.5px}
+.bascule input{width:22px;height:22px;accent-color:var(--tampon);flex:none}
+
+.ecart{display:flex;flex-direction:column;gap:1px;border-left:3px solid var(--usage);
+  background:#FBF7EF;border-radius:6px;padding:8px 10px;margin-bottom:6px}
+.ecart.grave{border-left-color:var(--mauvais);background:#FBEEEC}
+.ecart b{font-family:"Archivo Narrow",sans-serif;font-weight:600;font-size:14px}
+.ecart span{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--encre2)}
+
+.recap{box-shadow:var(--ombre)}
+.recap .st{background:#EEF3F9;border-radius:999px;padding:3px 10px}
+.recap .st.ko{background:#FBEEEC}
+.grand{border-radius:12px;box-shadow:0 14px 26px -18px rgba(75,46,131,.95);transition:transform .12s, background .15s}
+.grand:active{transform:scale(.99)}
+.grand.secondaire{box-shadow:var(--ombre)}
+
+.nav{background:rgba(255,255,255,.9);border-top:1px solid #DCE4EF;box-shadow:0 -14px 30px -26px rgba(17,29,51,.9)}
+.nav button{border-radius:11px;transition:transform .12s, background .15s}
+.nav button:active{transform:scale(.985)}
+.suivant{background:linear-gradient(180deg,#5C3AA0,#4B2E83);box-shadow:0 12px 24px -14px rgba(75,46,131,.9)}
+.retour{border-color:#D3DCE8}
+.ajout{border-radius:11px}
+.face{border-radius:7px;box-shadow:inset 0 2px 8px rgba(0,0,0,.65)}
+.sig canvas{border-radius:8px;border-color:#CBD6E4}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* ================= pictogrammes et finitions ================= */
+.pastille{display:inline-flex;align-items:center;justify-content:center;flex:none;
+  background:linear-gradient(180deg,#FFFFFF,#F3F7FC);border:1px solid #DCE5F0;
+  box-shadow:0 1px 2px rgba(17,29,51,.06), inset 0 1px 0 #fff;line-height:1}
+.pastille.grande{width:58px;height:58px;border-radius:17px;font-size:29px}
+.pastille.petite{width:34px;height:34px;border-radius:10px;font-size:17px;margin-right:2px}
+.tete-pas{display:flex;gap:14px;align-items:center;margin-bottom:8px}
+.tete-txt{min-width:0}
+.tete-pas .compte-pas{margin-bottom:5px}
+.tete-pas .titre-pas{margin:0}
+
+.carte-choix .emo{font-size:36px;line-height:1;filter:drop-shadow(0 4px 8px rgba(17,29,51,.18))}
+.carte-choix.compact{padding:15px 8px;gap:7px}
+.carte-choix.compact .emo{font-size:26px}
+.carte-choix[aria-pressed=true] .emo{filter:drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+
+.bloc-blanc h3{align-items:center}
+.bloc-blanc h3 .pastille{margin-right:9px}
+.ligne-piece{gap:11px;transition:border-color .18s, background .18s}
+.ligne-piece.active{border-color:#BFA9E8;background:linear-gradient(90deg,#FBF9FE,#fff 60%)}
+.elt-tete .pastille{margin-right:9px}
+.photo-btn .emo-btn{font-size:16px;line-height:1}
+.menu button{display:flex;align-items:center;gap:11px}
+.menu button span{font-size:17px;width:22px;text-align:center;flex:none}
+.recap button .pastille{margin-right:4px}
+.recap button>span:not(.pastille):first-of-type{flex:1}
+.ajout{letter-spacing:.04em}
+
+/* jauge de pièce */
+.jauge-piece{position:relative;height:26px;background:#fff;border:1px solid #D9E2ED;border-radius:999px;
+  overflow:hidden;margin-bottom:14px;box-shadow:var(--ombre)}
+.jauge-piece>div{height:100%;background:linear-gradient(90deg,#7A57C9,#4B2E83);
+  border-radius:999px;transition:width .35s cubic-bezier(.3,.9,.3,1)}
+.jauge-piece>span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--encre);mix-blend-mode:luminosity}
+.jauge-piece.plate{height:8px;margin:9px 0 0}
+
+/* carte de synthèse du récapitulatif */
+.hero{display:flex;gap:15px;align-items:center;background:linear-gradient(135deg,#fff,#F4F8FC);
+  border:1px solid #D9E2ED;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:var(--ombre)}
+.hero>div{min-width:0;flex:1}
+.hero b{display:block;font-family:"Archivo Narrow",sans-serif;font-size:17px;letter-spacing:.01em}
+.hero span{display:block;font-size:13px;color:var(--encre2);margin-top:2px}
+.hero.pret{background:linear-gradient(135deg,#F3FAF6,#fff);border-color:#B9DFC9}
+
+@media(min-width:760px){
+  .pastille.grande{width:66px;height:66px;font-size:33px;border-radius:19px}
+  .carte-choix .emo{font-size:42px}
+  .jauge-piece{height:30px}
+}
+
+/* ================= validation, toast, finitions UX ================= */
+.toast{position:fixed;left:50%;transform:translate(-50%,14px);bottom:96px;z-index:40;
+  max-width:min(520px,calc(100vw - 32px));background:#111D33;color:#fff;
+  border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.35;
+  box-shadow:0 18px 40px -16px rgba(17,29,51,.75);opacity:0;pointer-events:none;
+  transition:opacity .2s ease, transform .22s cubic-bezier(.3,.9,.3,1)}
+.toast.vu{opacity:1;transform:translate(-50%,0)}
+.toast::before{content:"⚠️";margin-right:8px}
+
+.nav-suite{max-width:600px;margin:0 auto;padding:8px 16px 0;font-size:12.5px;color:var(--encre2);
+  font-family:"Archivo Narrow",sans-serif;letter-spacing:.03em;text-align:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(min-width:760px){.nav-suite{max-width:880px;font-size:13.5px}}
+.nav-suite[hidden]{display:none}
+
+.manque{border-color:var(--mauvais) !important;box-shadow:0 0 0 3px rgba(163,42,31,.13) !important}
+.choix.manque{box-shadow:none !important;border:0 !important}
+.choix.manque .carte-choix{border-color:var(--mauvais);animation:pulse 1.6s ease 2}
+.ligne-piece.manque{border-color:var(--mauvais) !important}
+@keyframes pulse{0%,100%{box-shadow:var(--ombre)}50%{box-shadow:0 0 0 4px rgba(163,42,31,.14)}}
+
+.suivant.attente{background:linear-gradient(180deg,#8C7FB0,#6E5F94);box-shadow:none}
+.secoue{animation:secousse .38s ease}
+@keyframes secousse{
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-6px)}
+  40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(2px)}
+}
+.note.alerte{background:#FBF3E9;border:1px solid #E9D3B0;border-radius:10px;padding:11px 13px;margin-bottom:12px}
+
+/* confort de saisie */
+.elt:focus-within{border-left-color:var(--tampon)}
+.bloc-blanc:focus-within,.elt:focus-within{border-color:#BCA8E4}
+.photo-btn:active{transform:scale(.98)}
+.pas-a-pas button:active{background:#E4EBF4}
+::selection{background:rgba(75,46,131,.18)}
+@media(prefers-reduced-motion:reduce){
+  .toast,.secoue,.choix.manque .carte-choix{animation:none!important;transition:opacity .01s!important}
+}
+</style>
+</head>
+<body>
+
+<header class="barre">
+  <div class="barre-in">
+    <h1>État des lieux</h1>
+    <span class="marque" id="marque"></span>
+    <button class="menu-btn" id="menu-btn" aria-label="Menu">☰</button>
+  </div>
+  <div class="jauge-pas"><div id="jauge" style="width:0"></div></div>
+  <div class="menu" id="menu">
+    <button data-act="sauver"><span>💾</span>Enregistrer le fichier</button>
+    <button data-act="ouvrir"><span>📂</span>Ouvrir un état des lieux</button>
+    <button data-act="sortie"><span>📦</span>Créer la sortie à partir de l'entrée</button>
+    <button data-act="imprimer"><span>🖨️</span>Imprimer / enregistrer en PDF</button>
+    <button data-act="recap"><span>✅</span>Aller au récapitulatif</button>
+    <button data-act="vider"><span>🗑️</span>Tout effacer et recommencer</button>
+  </div>
+</header>
+
+<main>
+  <div class="tete-pas">
+    <span class="pastille grande" id="icone-pas"></span>
+    <div class="tete-txt">
+      <div class="compte-pas" id="compte-pas"></div>
+      <h2 class="titre-pas" id="titre-pas"></h2>
+    </div>
+  </div>
+  <p class="sous-pas" id="sous-pas"></p>
+  <div id="ecran"></div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<nav class="nav">
+  <div class="nav-suite" id="nav-suite"></div>
+  <div class="nav-in">
+    <button class="retour" id="btn-retour">Retour</button>
+    <button class="suivant" id="btn-suivant">Suivant</button>
+  </div>
+</nav>
+
+<div id="impression"></div>
+<input type="file" id="fichier-json" accept=".json" style="display:none">
+
+<script>
+"use strict";
+
+/* ================= données ================= */
+var ETATS = [
+  {c:"N", court:"Neuf",    nom:"Neuf"},
+  {c:"B", court:"Bon",     nom:"Bon état"},
+  {c:"U", court:"Usage",   nom:"État d'usage"},
+  {c:"M", court:"Mauvais", nom:"Mauvais état"},
+  {c:"S", court:"N.C.",    nom:"Sans objet"}
+];
+var NOM_ETAT = {N:"Neuf", B:"Bon état", U:"État d'usage", M:"Mauvais état", S:"Sans objet"};
+
+var BASE = ["Sol / revêtement","Murs","Plafond","Plinthes","Porte et serrure","Fenêtre et vitrage","Volet / store","Éclairage","Prises et interrupteurs","Chauffage / radiateur"];
+var PRESETS = {
+  "Entrée / couloir": BASE.concat(["Placard","Interphone / sonnette","Porte palière"]),
+  "Séjour / salon": BASE.concat(["Rangements"]),
+  "Chambre": BASE.concat(["Placard"]),
+  "Cuisine": BASE.concat(["Évier et robinetterie","Plan de travail","Meubles hauts et bas","Plaque de cuisson","Four","Hotte","Réfrigérateur","Ventilation / VMC","Faïence / crédence"]),
+  "Salle de bains": BASE.concat(["Lavabo / vasque","Baignoire / douche","Robinetterie","Miroir","Sèche-serviettes","Ventilation / VMC","Faïence","Joints silicone"]),
+  "WC": ["Sol / revêtement","Murs","Plafond","Porte et serrure","Cuvette","Abattant","Chasse d'eau","Lave-mains","Ventilation / VMC","Éclairage"],
+  "Buanderie / cellier": BASE.concat(["Arrivée et évacuation d'eau","Rangements"]),
+  "Balcon / terrasse": ["Sol","Garde-corps","Éclairage","Robinet extérieur","Propreté"],
+  "Cave / garage": ["Sol","Murs","Plafond","Porte","Éclairage","Compteur / arrivée"],
+  "Jardin / extérieur": ["Clôture / portail","Pelouse et plantations","Terrasse","Éclairage extérieur","Abri de jardin"],
+  "Inventaire du mobilier": ["Literie avec couette ou couverture","Volets ou rideaux dans les chambres","Plaques de cuisson","Four ou four à micro-ondes","Réfrigérateur","Congélateur ou compartiment congélation","Vaisselle en nombre suffisant","Ustensiles de cuisine","Table","Sièges","Étagères de rangement","Luminaires","Matériel d'entretien ménager"]
+};
+var ORDRE = ["Entrée / couloir","Séjour / salon","Cuisine","Chambre","Salle de bains","WC","Buanderie / cellier","Balcon / terrasse","Cave / garage","Jardin / extérieur"];
+var RANG = {N:4, B:3, U:2, M:1};
+
+/* Grille de vétusté indicative : durée de vie, franchise, abattement annuel, part résiduelle */
+var VETUSTE = [
+  ["Peintures, papiers peints", 7, 1, "15 %", "20 %"],
+  ["Revêtement de sol souple (vinyle, lino)", 10, 2, "10 %", "20 %"],
+  ["Moquette", 7, 1, "15 %", "10 %"],
+  ["Parquet", 25, 3, "5 %", "25 %"],
+  ["Faïence, carrelage", 15, 2, "8 %", "25 %"],
+  ["Appareils sanitaires", 20, 2, "6 %", "20 %"],
+  ["Robinetterie", 15, 2, "8 %", "15 %"],
+  ["Meubles de cuisine", 15, 2, "8 %", "20 %"],
+  ["Plaques de cuisson, four, hotte", 10, 1, "12 %", "15 %"],
+  ["Réfrigérateur, lave-linge", 10, 1, "12 %", "15 %"],
+  ["Chaudière, chauffe-eau", 15, 2, "8 %", "20 %"],
+  ["Volets, stores", 15, 2, "8 %", "20 %"],
+  ["Fenêtres, portes-fenêtres", 25, 3, "5 %", "25 %"],
+  ["Portes intérieures, serrures", 20, 2, "6 %", "20 %"],
+  ["Appareillage électrique (prises, interrupteurs)", 15, 2, "8 %", "20 %"],
+  ["Literie, mobilier (location meublée)", 10, 1, "12 %", "15 %"]
+];
+
+var EMO_PIECE = {
+  "Entrée / couloir":"🚪", "Séjour / salon":"🛋️", "Cuisine":"🍳", "Chambre":"🛏️",
+  "Salle de bains":"🛁", "WC":"🚽", "Buanderie / cellier":"🧺", "Balcon / terrasse":"🌤️",
+  "Cave / garage":"🚗", "Jardin / extérieur":"🌳", "Inventaire du mobilier":"🪑", "Pièce libre":"📐"
+};
+var EMO_LOGEMENT = {
+  "Appartement":"🏢", "Maison":"🏡", "Studio":"🛏️", "Chambre":"🚪", "Local annexe":"🏚️", "Autre":"📦"
+};
+var EMO_COMPTEUR = {
+  "Électricité":"⚡", "Gaz":"🔥", "Eau froide":"🚰", "Eau chaude":"🚿"
+};
+var EMO_ELT = [
+  [/sol|parquet|moquette|carrelage/i, "🟫"], [/mur|faïence|crédence|papier/i, "🧱"],
+  [/plafond/i, "⬜"], [/plinthe/i, "📏"], [/porte|serrure|palière/i, "🚪"],
+  [/fenêtre|vitrage|vitre/i, "🪟"], [/volet|store|rideau|occultation/i, "🪟"],
+  [/éclairage|luminaire|lampe/i, "💡"], [/prise|interrupteur|électrique|appareillage/i, "🔌"],
+  [/chauffage|radiateur|sèche-serviettes|chaudière/i, "🔥"], [/placard|rangement|étagère|meuble/i, "🗄️"],
+  [/évier|lavabo|vasque|robinet/i, "🚰"], [/plan de travail/i, "🔪"], [/plaque|cuisson/i, "🍳"],
+  [/four|micro-ondes/i, "🔥"], [/hotte|ventilation|vmc/i, "💨"], [/réfrigérateur|congélat/i, "🧊"],
+  [/baignoire|douche/i, "🚿"], [/miroir/i, "🪞"], [/cuvette|abattant|chasse|wc/i, "🚽"],
+  [/joint|silicone/i, "🧴"], [/interphone|sonnette/i, "🔔"], [/garde-corps|clôture|portail/i, "🚧"],
+  [/pelouse|plantation|jardin/i, "🌱"], [/literie|couette/i, "🛏️"], [/vaisselle|ustensile/i, "🍽️"],
+  [/table|siège|chaise/i, "🪑"], [/entretien|ménager/i, "🧹"], [/compteur|arrivée/i, "🔢"],
+  [/propreté/i, "✨"], [/terrasse|abri/i, "🏕️"]
+];
+function emoElt(nom){
+  for(var i = 0; i < EMO_ELT.length; i++){ if(EMO_ELT[i][0].test(nom)) return EMO_ELT[i][1]; }
+  return "📌";
+}
+function emoPiece(p){ return EMO_PIECE[p.type] || "📐"; }
+function past(e, petite){ return '<span class="pastille' + (petite ? " petite" : "") + '">' + e + "</span>"; }
+
+var ICONES = {
+  cle:'<svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v4M21 12v3"/></svg>',
+  carton:'<svg viewBox="0 0 24 24"><path d="M3 8l9-4 9 4v9l-9 4-9-4z"/><path d="M3 8l9 4 9-4M12 12v9"/></svg>',
+  appareil:'<svg viewBox="0 0 24 24"><path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg>',
+  galerie:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="M21 16l-5-5-6 6-2-2-5 5"/></svg>',
+  crayon:'<svg viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16z"/><path d="M14 6l4 4"/></svg>',
+  dossier:'<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 012-2h4l2 2h7a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M12 11v5M9.5 13.5L12 11l2.5 2.5"/></svg>'
+};
+
+function neuf(){
+  var auj = new Date().toISOString().slice(0,10);
+  return {
+    version:2, type:"", date:auj,
+    typeLogement:"", adresse:"", ville:"", surface:"", meuble:"non", etage:"",
+    bailleur:{nom:"", contact:"", adresse:""},
+    locataires:[{nom:"", contact:"", adresse:""}],
+    presents:"Bailleur et locataire",
+    compteurs:[
+      {libelle:"Électricité", numero:"", index:"", unite:"kWh", index2:"", libelle2:"Heures creuses"},
+      {libelle:"Gaz", numero:"", index:"", unite:"m³", index2:"", libelle2:""},
+      {libelle:"Eau froide", numero:"", index:"", unite:"m³", index2:"", libelle2:""},
+      {libelle:"Eau chaude", numero:"", index:"", unite:"m³", index2:"", libelle2:""}
+    ],
+    cles:[{designation:"Porte d'entrée", nombre:"2", commentaire:""},
+          {designation:"Boîte aux lettres", nombre:"1", commentaire:""}],
+    pieces:[], observations:"", faitA:"", faitLe:auj, vetuste:true,
+    horodatage:{bailleur:"", locataire:""},
+    signatures:{bailleur:"", locataire:""},
+    paraphes:{bailleur:"", locataire:""}
+  };
+}
+var S = neuf();
+var pas = 0;
+var seq = 0;
+var attenteSortie = false;
+var sauvegarde = true;
+
+/* ================= utilitaires ================= */
+function el(s,c){ return (c||document).querySelector(s); }
+function els(s,c){ return Array.prototype.slice.call((c||document).querySelectorAll(s)); }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function uid(){ seq++; return "p"+Date.now().toString(36)+seq; }
+function horodate(d){
+  function z(n){ return (n < 10 ? "0" : "") + n; }
+  return z(d.getDate()) + "/" + z(d.getMonth()+1) + "/" + d.getFullYear() + " à " + z(d.getHours()) + ":" + z(d.getMinutes());
+}
+function horoISO(iso){ if(!iso) return ""; try{ return horodate(new Date(iso)); }catch(e){ return ""; } }
+function srcPhoto(o){ return (o && o.src) ? o.src : o; }
+function tsPhoto(o){ return (o && o.t) ? horoISO(o.t) : ""; }
+function empreinte(cb){
+  var txt = JSON.stringify(S);
+  try{
+    if(window.crypto && crypto.subtle && crypto.subtle.digest){
+      crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt)).then(function(buf){
+        cb(Array.prototype.map.call(new Uint8Array(buf), function(b){ return ("0"+b.toString(16)).slice(-2); }).join(""));
+      }).catch(function(){ cb(""); });
+      return;
+    }
+  }catch(e){}
+  cb("");
+}
+function ecarts(){
+  var r = [];
+  if(S.type !== "sortie") return r;
+  S.pieces.forEach(function(p){
+    p.elements.forEach(function(e){
+      var a = RANG[e.etatEntree], b = RANG[e.etat];
+      if(!a || !b || b >= a) return;
+      r.push({piece:p.nom, elt:e.nom, avant:NOM_ETAT[e.etatEntree], apres:NOM_ETAT[e.etat], delta:a-b, com:e.commentaire || ""});
+    });
+  });
+  return r;
+}
+function frDate(iso){ if(!iso) return "……/……/………"; var d=String(iso).split("-"); return d.length<3?iso:d[2]+"/"+d[1]+"/"+d[0]; }
+function get(p){ var o=S,a=p.split("."),i; for(i=0;i<a.length;i++){ if(o==null) return ""; o=o[a[i]]; } return o==null?"":o; }
+function set(p,v){ var o=S,a=p.split("."),i; for(i=0;i<a.length-1;i++) o=o[a[i]]; o[a[a.length-1]]=v; touche(); }
+
+var minuteur=null;
+function touche(){
+  sauvegarde = false;
+  if(minuteur) clearTimeout(minuteur);
+  minuteur=setTimeout(function(){
+    try{ if(window.storage && window.storage.set) window.storage.set("edl:brouillon", JSON.stringify(S)).catch(function(){}); }catch(e){}
+  }, 700);
+}
+
+/* ================= étapes ================= */
+function etapes(){
+  var t = [
+    {id:"type", ic:"📋", titre:"Quel type d'état des lieux réalises-tu ?", sous:"Le document et sa mise en page s'adaptent à ce choix."},
+    {id:"logement", ic:(EMO_LOGEMENT[S.typeLogement] || "🏢"), titre:"Le logement", sous:"Adresse et caractéristiques telles qu'elles figurent au bail."},
+    {id:"parties", ic:"🧑‍🤝‍🧑", titre:"Les parties", sous:"Bailleur et locataire(s) présents au constat."},
+    {id:"compteurs", ic:"🔢", titre:"Relevés de compteurs", sous:"Relevé obligatoire à l'entrée comme à la sortie."},
+    {id:"cles", ic:"🔑", titre:"Clés et moyens d'accès", sous:"Nombre et destination de chaque clé remise."},
+    {id:"composition", ic:"🧭", titre:"Quelles pièces composent le logement ?", sous:"Chaque pièce devient une étape de la visite."}
+  ];
+  S.pieces.forEach(function(p,i){ t.push({id:"piece", i:i, ic:emoPiece(p), titre:p.nom, sous:"Note chaque élément, ajoute une photo si besoin."}); });
+  t.push({id:"final", ic:"✍️", titre:"Observations et signatures", sous:"Dernière étape avant l'édition du document."});
+  t.push({id:"recap", ic:"✅", titre:"Document prêt", sous:"Relis, puis enregistre ou édite le PDF."});
+  return t;
+}
+
+function manques(e){
+  var m = [];
+  if(e.id === "type" && !S.type) m.push({msg:"Choisis d'abord entrée ou sortie.", ou:".choix"});
+  if(e.id === "type" && S.type === "sortie" && !S.origineSortie) m.push({msg:"Indique comment établir cette sortie : de zéro, ou depuis le fichier d'entrée.", ou:".choix"});
+  if(e.id === "logement"){
+    if(!S.typeLogement) m.push({msg:"Choisis le type de logement.", ou:".choix"});
+    if(!S.adresse) m.push({msg:"L'adresse du logement est obligatoire.", ou:"[data-path=adresse]"});
+  }
+  if(e.id === "parties"){
+    if(!S.bailleur.nom) m.push({msg:"Le nom du bailleur est obligatoire.", ou:"[data-path='bailleur.nom']"});
+    if(!S.locataires[0] || !S.locataires[0].nom) m.push({msg:"Le nom du locataire est obligatoire.", ou:"[data-req=loc0]"});
+  }
+  if(e.id === "composition" && !S.pieces.length) m.push({msg:"Ajoute au moins une pièce pour continuer.", ou:".ligne-piece"});
+  return m;
+}
+function signale(msg){
+  var t = el("#toast");
+  t.textContent = msg;
+  t.classList.add("vu");
+  clearTimeout(signale.h);
+  signale.h = setTimeout(function(){ t.classList.remove("vu"); }, 3200);
+}
+function marqueManques(m){
+  m.forEach(function(x){
+    if(!x.ou) return;
+    els(x.ou).forEach(function(n){
+      n.classList.add("manque");
+      var ote = function(){ n.classList.remove("manque"); };
+      n.addEventListener("input", ote, {once:true});
+      n.addEventListener("click", ote, {once:true});
+    });
+  });
+  var s = el("#btn-suivant");
+  s.classList.remove("secoue");
+  void s.offsetWidth;
+  s.classList.add("secoue");
+}
+function allerA(n){
+  var t = etapes();
+  pas = Math.max(0, Math.min(n, t.length-1));
+  dessine();
+  window.scrollTo({top:0, behavior:"instant"});
+}
+function suivant(){
+  var t = etapes();
+  var m = manques(t[pas]);
+  if(m.length){ signale(m[0].msg); marqueManques(m); return; }
+  allerA(pas+1);
+}
+
+/* ================= rendu ================= */
+function dessine(){
+  var t = etapes(), e = t[pas];
+  el("#icone-pas").textContent = e.ic || "📋";
+  el("#compte-pas").textContent = "Étape " + (pas+1) + " sur " + t.length;
+  el("#titre-pas").textContent = e.titre;
+  el("#sous-pas").textContent = e.sous;
+  el("#jauge").style.width = Math.round(pas/(t.length-1)*100) + "%";
+  var tot = 0, faits = 0;
+  S.pieces.forEach(function(x){ x.elements.forEach(function(y){ tot++; if(y.etat) faits++; }); });
+  el("#marque").textContent = (S.type ? (S.type === "entree" ? "ENTRÉE" : "SORTIE") : "") +
+    (tot ? " · " + Math.round(faits / tot * 100) + " %" : "");
+  el("#btn-retour").hidden = (pas === 0);
+  el("#btn-suivant").hidden = (e.id === "recap");
+  var incomplet = manques(e).length > 0;
+  el("#btn-suivant").classList.toggle("attente", incomplet);
+  el("#btn-suivant").textContent = (t[pas+1] && t[pas+1].id === "recap") ? "Terminer" : "Suivant";
+  var suite = t[pas+1];
+  el("#nav-suite").innerHTML = suite ? ("Ensuite&nbsp;: " + (suite.ic || "") + " " + esc(suite.titre)) : "";
+  el("#nav-suite").hidden = !suite;
+
+  var b = el("#ecran");
+  b.innerHTML = "";
+  ({type:vType, logement:vLogement, parties:vParties, compteurs:vCompteurs,
+    cles:vCles, composition:vComposition, piece:vPiece, final:vFinal, recap:vRecap})[e.id](b, e);
+  touche();
+}
+
+function lie(inp, chemin){
+  inp.value = get(chemin);
+  inp.addEventListener("input", function(){ set(chemin, inp.value); });
+  inp.addEventListener("change", function(){ set(chemin, inp.value); });
+}
+function champ(libelle, chemin, type, ph){
+  var l = document.createElement("label");
+  l.className = "champ";
+  l.innerHTML = '<span>' + esc(libelle) + '</span><input type="' + (type||"text") + '" placeholder="' + esc(ph||"") + '">';
+  lie(el("input", l), chemin);
+  return l;
+}
+
+/* --- 1. type --- */
+function vType(b){
+  var d = document.createElement("div");
+  d.className = "choix";
+  [["entree","Entrée","🏠","Le locataire arrive"],["sortie","Sortie","📦","Le locataire s'en va"]].forEach(function(o){
+    var x = document.createElement("button");
+    x.className = "carte-choix";
+    x.setAttribute("aria-pressed", S.type === o[0]);
+    x.innerHTML = '<span class="emo">' + o[2] + "</span><span>" + o[1] + "</span><em>" + o[3] + "</em>";
+    x.addEventListener("click", function(){ S.type = o[0]; dessine(); });
+    d.appendChild(x);
+  });
+  b.appendChild(d);
+
+  var da = document.createElement("div");
+  da.className = "pile";
+  da.style.marginTop = "16px";
+  da.appendChild(champ("Date du constat", "date", "date"));
+  b.appendChild(da);
+
+  if(S.type === "sortie"){
+    var lab = document.createElement("div");
+    lab.className = "avant-lab";
+    lab.style.margin = "20px 0 9px";
+    lab.textContent = "Comment veux-tu établir cette sortie ?";
+    b.appendChild(lab);
+    var c2 = document.createElement("div");
+    c2.className = "choix";
+    [["manuelle", "Repartir de zéro", "✏️", "Tu ressaisis toi-même l'état constaté à l'entrée, élément par élément."],
+     ["fichier", "Reprendre l'entrée", "📂", "Ouvre le fichier .json de l'entrée : tout est repris automatiquement."]].forEach(function(o){
+      var x = document.createElement("button");
+      x.className = "carte-choix";
+      x.setAttribute("aria-pressed", S.origineSortie === o[0]);
+      x.innerHTML = '<span class="emo">' + o[2] + "</span><span>" + o[1] + "</span><em>" + o[3] + "</em>";
+      x.addEventListener("click", function(){
+        if(o[0] === "fichier"){ attenteSortie = true; el("#fichier-json").click(); }
+        else { S.origineSortie = "manuelle"; dessine(); }
+      });
+      c2.appendChild(x);
+    });
+    b.appendChild(c2);
+  }
+
+  var n = document.createElement("p");
+  n.className = "note";
+  n.style.marginTop = "16px";
+  n.innerHTML = S.type === "sortie"
+    ? "Dans les deux cas, l'état d'entrée reste modifiable élément par élément, et le document final présente les deux colonnes côte à côte."
+    : "Tout reste sur cet appareil. Pense à <strong>Enregistrer le fichier</strong> en fin de visite : c'est lui qui servira de base à l'état des lieux de sortie.";
+  b.appendChild(n);
+}
+
+/* --- 2. logement --- */
+function vLogement(b){
+  var d = document.createElement("div");
+  d.className = "choix trois";
+  ["Appartement","Maison","Studio","Chambre","Local annexe","Autre"].forEach(function(t){
+    var x = document.createElement("button");
+    x.className = "carte-choix compact";
+    x.setAttribute("aria-pressed", S.typeLogement === t);
+    x.innerHTML = '<span class="emo">' + (EMO_LOGEMENT[t] || "🏢") + "</span><span>" + t + "</span>";
+    x.addEventListener("click", function(){ S.typeLogement = t; dessine(); });
+    d.appendChild(x);
+  });
+  b.appendChild(d);
+
+  var p = document.createElement("div");
+  p.className = "pile";
+  p.style.marginTop = "16px";
+  p.appendChild(champ("Adresse du logement", "adresse", "text", "12 rue des Lilas, bât. B, appt 14"));
+  var duo = document.createElement("div");
+  duo.className = "duo";
+  duo.appendChild(champ("Code postal et ville", "ville", "text", "69003 Lyon"));
+  duo.appendChild(champ("Surface habitable (m²)", "surface"));
+  p.appendChild(duo);
+  var duo2 = document.createElement("div");
+  duo2.className = "duo";
+  duo2.appendChild(champ("Étage / n° de lot", "etage"));
+  var lm = document.createElement("label");
+  lm.className = "champ";
+  lm.innerHTML = '<span>Location meublée</span><select><option value="non">Non — logement nu</option><option value="oui">Oui — meublé</option></select>';
+  lie(el("select", lm), "meuble");
+  duo2.appendChild(lm);
+  p.appendChild(duo2);
+  b.appendChild(p);
+}
+
+/* --- 3. parties --- */
+function vParties(b){
+  var bl = document.createElement("div");
+  bl.className = "bloc-blanc";
+  bl.innerHTML = "<h3>" + past("🧑‍💼", true) + "Bailleur</h3>";
+  var pl = document.createElement("div");
+  pl.className = "pile";
+  pl.appendChild(champ("Nom ou dénomination", "bailleur.nom"));
+  pl.appendChild(champ("Domicile ou siège social", "bailleur.adresse"));
+  pl.appendChild(champ("Téléphone / e-mail", "bailleur.contact"));
+  bl.appendChild(pl);
+  b.appendChild(bl);
+
+  S.locataires.forEach(function(l, i){
+    var c = document.createElement("div");
+    c.className = "bloc-blanc";
+    c.innerHTML = "<h3>" + past("🧑", true) + "Locataire " + (i+1) + '<button class="sup" title="Retirer">✕</button></h3>';
+    el("button", c).addEventListener("click", function(){
+      S.locataires.splice(i,1);
+      if(!S.locataires.length) S.locataires.push({nom:"",contact:"",adresse:""});
+      dessine();
+    });
+    var p = document.createElement("div");
+    p.className = "pile";
+    [["Nom et prénom","nom"],[S.type==="sortie"?"Nouvelle adresse":"Domicile actuel","adresse"],["Téléphone / e-mail","contact"]].forEach(function(f){
+      var lab = document.createElement("label");
+      lab.className = "champ";
+      lab.innerHTML = '<span>' + esc(f[0]) + '</span><input type="text">';
+      var inp = el("input", lab);
+      if(i === 0 && f[1] === "nom") inp.setAttribute("data-req", "loc0");
+      inp.value = l[f[1]] || "";
+      inp.addEventListener("input", function(){ l[f[1]] = inp.value; touche(); });
+      p.appendChild(lab);
+    });
+    c.appendChild(p);
+    b.appendChild(c);
+  });
+
+  var a = document.createElement("button");
+  a.className = "ajout";
+  a.innerHTML = "🧑  Ajouter un locataire";
+  a.addEventListener("click", function(){ S.locataires.push({nom:"",contact:"",adresse:""}); dessine(); });
+  b.appendChild(a);
+
+  var pr = document.createElement("div");
+  pr.className = "pile";
+  pr.style.marginTop = "14px";
+  pr.appendChild(champ("Présent(s) lors du constat", "presents"));
+  b.appendChild(pr);
+}
+
+/* --- 4. compteurs --- */
+function vCompteurs(b){
+  S.compteurs.forEach(function(c, i){
+    var d = document.createElement("div");
+    d.className = "bloc-blanc";
+    d.innerHTML = "<h3></h3>" +
+      '<label class="champ"><span>N° de compteur / PDL</span><input type="text" data-k="numero"></label>' +
+      '<div class="face-lab">Index relevé</div>' +
+      '<div class="face"><input data-k="index" inputmode="decimal" placeholder="000000"><span class="unite"></span></div>' +
+      '<div class="second"></div>';
+    el("h3", d).innerHTML = past(EMO_COMPTEUR[c.libelle] || "🔢", true) + esc(c.libelle);
+    var sup = document.createElement("button");
+    sup.className = "sup";
+    sup.textContent = "✕";
+    sup.addEventListener("click", function(){ S.compteurs.splice(i,1); dessine(); });
+    el("h3", d).appendChild(sup);
+    el(".unite", d).textContent = c.unite;
+    if(c.libelle2){
+      var s = el(".second", d);
+      s.innerHTML = '<div class="face-lab"></div><div class="face"><input data-k="index2" inputmode="decimal" placeholder="000000"><span class="unite"></span></div>';
+      el(".face-lab", s).textContent = c.libelle2;
+      el(".unite", s).textContent = c.unite;
+    }
+    if(S.type === "sortie"){
+      var av = document.createElement("div");
+      av.innerHTML = '<div class="face-lab">Index relevé à l\'entrée</div>' +
+        '<div class="face petite"><input data-k="indexEntree" inputmode="decimal" placeholder="000000"><span class="unite">' + esc(c.unite) + '</span></div>' +
+        (c.libelle2 ? '<div class="face-lab">' + esc(c.libelle2) + ' à l\'entrée</div><div class="face petite"><input data-k="index2Entree" inputmode="decimal" placeholder="000000"><span class="unite">' + esc(c.unite) + '</span></div>' : "");
+      d.appendChild(av);
+    }
+    els("input[data-k]", d).forEach(function(inp){
+      var k = inp.getAttribute("data-k");
+      inp.value = c[k] || "";
+      inp.addEventListener("input", function(){ c[k] = inp.value; touche(); });
+    });
+    b.appendChild(d);
+  });
+  var a = document.createElement("button");
+  a.className = "ajout";
+  a.innerHTML = "🔢  Ajouter un compteur";
+  a.addEventListener("click", function(){
+    var n = prompt("Nom du compteur :", "Fioul");
+    if(!n) return;
+    S.compteurs.push({libelle:n, numero:"", index:"", unite:(prompt("Unité :", "L") || ""), index2:"", libelle2:""});
+    dessine();
+  });
+  b.appendChild(a);
+}
+
+/* --- 5. clés --- */
+function vCles(b){
+  S.cles.forEach(function(c, i){
+    var d = document.createElement("div");
+    d.className = "bloc-blanc";
+    d.innerHTML = "<h3>" + past("🔑", true) + "Clé " + (i+1) + '<button class="sup">✕</button></h3>' +
+      '<div class="pile">' +
+      '<label class="champ"><span>Désignation</span><input type="text" data-k="designation" placeholder="Porte d\'entrée, cave, badge…"></label>' +
+      '<div class="duo"><label class="champ"><span>Nombre remis</span><input type="text" data-k="nombre" inputmode="numeric"></label>' +
+      '<label class="champ"><span>Observations</span><input type="text" data-k="commentaire"></label></div></div>';
+    el("h3 .sup", d).addEventListener("click", function(){ S.cles.splice(i,1); dessine(); });
+    els("input[data-k]", d).forEach(function(inp){
+      var k = inp.getAttribute("data-k");
+      inp.value = c[k] || "";
+      inp.addEventListener("input", function(){ c[k] = inp.value; touche(); });
+    });
+    b.appendChild(d);
+  });
+  var a = document.createElement("button");
+  a.className = "ajout";
+  a.innerHTML = "🔑  Ajouter une clé";
+  a.addEventListener("click", function(){ S.cles.push({designation:"",nombre:"1",commentaire:""}); dessine(); });
+  b.appendChild(a);
+}
+
+/* --- 6. composition --- */
+function compte(type){ return S.pieces.filter(function(p){ return p.type === type; }).length; }
+function renomme(type){
+  var l = S.pieces.filter(function(p){ return p.type === type; });
+  l.forEach(function(p, i){ if(!p.nomPerso) p.nom = l.length > 1 ? type.split(" / ")[0] + " " + (i+1) : type; });
+}
+function ajoutePiece(type){
+  S.pieces.push({id:uid(), type:type, nom:type, nomPerso:false, observations:"", photos:[],
+    elements:(PRESETS[type] || BASE).map(function(n){ return {nom:n, etat:"", commentaire:"", photos:[]}; })});
+  renomme(type);
+}
+function retirePiece(type){
+  for(var i = S.pieces.length-1; i >= 0; i--){ if(S.pieces[i].type === type){ S.pieces.splice(i,1); break; } }
+  renomme(type);
+}
+function vComposition(b){
+  var liste = ORDRE.slice();
+  if(S.meuble === "oui") liste.push("Inventaire du mobilier");
+  if(S.meuble === "oui" && !S.pieces.filter(function(x){ return x.type === "Inventaire du mobilier"; }).length){
+    var av = document.createElement("p");
+    av.className = "note";
+    av.style.marginBottom = "12px";
+    av.innerHTML = "Location meublée : l'inventaire du mobilier est <strong>obligatoire</strong>. La liste réglementaire est proposée en bas de cette page.";
+    b.appendChild(av);
+  }
+  liste.forEach(function(t){
+    var d = document.createElement("div");
+    d.className = "ligne-piece";
+    d.innerHTML = past(EMO_PIECE[t] || "📐", true) + "<b></b><div class=\"pas-a-pas\"><button aria-label=\"Retirer\">−</button><span></span><button aria-label=\"Ajouter\">+</button></div>";
+    el("b", d).textContent = t;
+    if(compte(t)) d.classList.add("active");
+    el("span", d).textContent = compte(t);
+    var bs = els("button", d);
+    bs[0].addEventListener("click", function(){ if(compte(t)) { retirePiece(t); dessine(); } });
+    bs[1].addEventListener("click", function(){ ajoutePiece(t); dessine(); });
+    b.appendChild(d);
+  });
+  var a = document.createElement("button");
+  a.className = "ajout";
+  a.innerHTML = "📐  Pièce personnalisée";
+  a.addEventListener("click", function(){
+    var n = prompt("Nom de la pièce :", "Mezzanine");
+    if(!n) return;
+    S.pieces.push({id:uid(), type:"Pièce libre", nom:n, nomPerso:true, observations:"", photos:[],
+      elements:BASE.map(function(x){ return {nom:x, etat:"", commentaire:"", photos:[]}; })});
+    dessine();
+  });
+  b.appendChild(a);
+
+  if(S.pieces.length){
+    var p = document.createElement("p");
+    p.className = "note";
+    p.style.marginTop = "14px";
+    p.textContent = "Ordre de visite : " + S.pieces.map(function(x){ return x.nom; }).join(" → ");
+    b.appendChild(p);
+  }
+}
+
+/* --- 7…n. une pièce --- */
+function vPiece(b, e){
+  var p = S.pieces[e.i];
+
+  var faits = p.elements.filter(function(z){ return z.etat; }).length;
+  var jp = document.createElement("div");
+  jp.className = "jauge-piece";
+  jp.innerHTML = '<div style="width:' + (p.elements.length ? Math.round(faits / p.elements.length * 100) : 0) + '%"></div>' +
+    "<span>" + faits + " / " + p.elements.length + "</span>";
+  b.appendChild(jp);
+
+  var tete = document.createElement("div");
+  tete.className = "bloc-blanc";
+  tete.innerHTML = '<label class="champ"><span>Nom de la pièce</span><input type="text"></label>';
+  var ni = el("input", tete);
+  ni.value = p.nom;
+  ni.addEventListener("input", function(){ p.nom = ni.value; p.nomPerso = true; el("#titre-pas").textContent = ni.value; touche(); });
+  b.appendChild(tete);
+
+  var grille = document.createElement("div");
+  grille.className = "grille-elts";
+  b.appendChild(grille);
+
+  p.elements.forEach(function(x, j){
+    var d = document.createElement("div");
+    d.className = "elt" + (x.etat ? " fait" : "");
+    d.setAttribute("data-e", x.etat || "");
+    var sortie = S.type === "sortie";
+    d.innerHTML = '<div class="elt-tete">' + past(emoElt(x.nom), true) + '<b>' + esc(x.nom) + '</b>' +
+      '<input class="nb" type="text" inputmode="numeric" placeholder="nb" title="Nombre">' +
+      '<button class="sup" title="Retirer">✕</button></div>' +
+      (sortie ? '<div class="avant"><div class="avant-lab">État constaté à l\'entrée</div><div class="mini"></div>' +
+                '<input class="com-avant" type="text" placeholder="observation relevée à l\'entrée"></div>' +
+                '<div class="avant-lab">État constaté à la sortie</div>' : "") +
+      '<div class="notes"></div>' +
+      '<input class="com" type="text" placeholder="observations, défauts, mesures…">' +
+      '<div class="photo-actions">' +
+        '<label class="photo-btn"><span class="emo-btn">📷</span><span>Prendre une photo</span>' +
+        '<input type="file" accept="image/*" capture="environment"></label>' +
+        '<label class="photo-btn secondaire"><span class="emo-btn">🖼️</span><span>Depuis la tablette</span>' +
+        '<input type="file" accept="image/*" multiple></label>' +
+      '</div><div class="photos"></div>';
+
+    if(sortie){
+      var mini = el(".mini", d);
+      ETATS.forEach(function(o){
+        var t = document.createElement("button");
+        t.setAttribute("data-v", o.c);
+        t.setAttribute("title", o.nom);
+        t.setAttribute("aria-pressed", x.etatEntree === o.c);
+        t.textContent = o.court;
+        t.addEventListener("click", function(){
+          x.etatEntree = (x.etatEntree === o.c) ? "" : o.c;
+          els("button", mini).forEach(function(z){ z.setAttribute("aria-pressed", x.etatEntree === z.getAttribute("data-v")); });
+          touche();
+        });
+        mini.appendChild(t);
+      });
+      var ca = el("input.com-avant", d);
+      ca.value = x.commentaireEntree || "";
+      ca.addEventListener("input", function(){ x.commentaireEntree = ca.value; touche(); });
+    }
+
+    var notes = el(".notes", d);
+    ETATS.forEach(function(o){
+      var t = document.createElement("button");
+      t.setAttribute("data-v", o.c);
+      t.setAttribute("title", o.nom);
+      t.setAttribute("aria-pressed", x.etat === o.c);
+      t.textContent = o.court;
+      t.addEventListener("click", function(){
+        x.etat = (x.etat === o.c) ? "" : o.c;
+        els("button", notes).forEach(function(z){ z.setAttribute("aria-pressed", x.etat === z.getAttribute("data-v")); });
+        d.className = "elt" + (x.etat ? " fait" : "");
+        d.setAttribute("data-e", x.etat || "");
+        touche();
+      });
+      notes.appendChild(t);
+    });
+
+    var nb = el("input.nb", d);
+    nb.value = x.nb || "";
+    nb.addEventListener("input", function(){ x.nb = nb.value; touche(); });
+
+    var com = el("input.com", d);
+    com.value = x.commentaire || "";
+    com.addEventListener("input", function(){ x.commentaire = com.value; touche(); });
+
+    els(".photo-actions input", d).forEach(function(inp){
+      inp.addEventListener("change", function(ev){ ajoutePhotos(ev.target.files, x, p.nom + " · " + x.nom); ev.target.value = ""; });
+    });
+    dessinePhotos(el(".photos", d), x);
+
+    el("button.sup", d).addEventListener("click", function(){ p.elements.splice(j,1); dessine(); });
+    grille.appendChild(d);
+  });
+
+  var a = document.createElement("button");
+  a.className = "ajout";
+  a.innerHTML = "➕  Ajouter un élément";
+  a.addEventListener("click", function(){
+    var n = prompt("Nom de l'élément :");
+    if(n){ p.elements.push({nom:n, etat:"", commentaire:"", photos:[]}); dessine(); }
+  });
+  b.appendChild(a);
+
+  var o = document.createElement("div");
+  o.className = "bloc-blanc";
+  o.style.marginTop = "12px";
+  o.innerHTML = '<label class="champ"><span>Observations générales sur la pièce</span><textarea style="min-height:70px"></textarea></label>';
+  var ta = el("textarea", o);
+  ta.value = p.observations || "";
+  ta.addEventListener("input", function(){ p.observations = ta.value; touche(); });
+  b.appendChild(o);
+}
+
+function dessinePhotos(box, cible){
+  box.innerHTML = "";
+  (cible.photos || []).forEach(function(o, k){
+    var c = document.createElement("div");
+    c.className = "photo";
+    c.innerHTML = '<img alt=""><button title="Supprimer">✕</button><span class="ts"></span>';
+    el("img", c).src = srcPhoto(o);
+    el(".ts", c).textContent = tsPhoto(o);
+    el("button", c).addEventListener("click", function(){ cible.photos.splice(k,1); dessinePhotos(box, cible); touche(); });
+    box.appendChild(c);
+  });
+}
+function ajoutePhotos(files, cible, legende){
+  if(!cible.photos) cible.photos = [];
+  var reste = files.length;
+  Array.prototype.forEach.call(files, function(f){
+    var lect = new FileReader();
+    lect.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var max = 1400, r = Math.min(1, max / Math.max(img.width, img.height));
+        var cv = document.createElement("canvas");
+        cv.width = Math.round(img.width * r);
+        cv.height = Math.round(img.height * r);
+        var c = cv.getContext("2d");
+        c.drawImage(img, 0, 0, cv.width, cv.height);
+
+        var d = new Date();
+        var t = horodate(d);
+        var taille = Math.max(13, Math.round(cv.width * 0.026));
+        var bande = Math.round(taille * 2.1);
+        c.fillStyle = "rgba(15,20,29,.74)";
+        c.fillRect(0, cv.height - bande, cv.width, bande);
+        c.textBaseline = "middle";
+        c.font = "600 " + taille + "px 'IBM Plex Mono', ui-monospace, monospace";
+        c.fillStyle = "#F2C14E";
+        c.fillText(t, taille * 0.7, cv.height - bande / 2);
+        if(legende){
+          c.font = "500 " + Math.round(taille * 0.92) + "px 'Public Sans', sans-serif";
+          c.fillStyle = "#E8EEF7";
+          c.textAlign = "right";
+          c.fillText(legende, cv.width - taille * 0.7, cv.height - bande / 2);
+          c.textAlign = "left";
+        }
+        cible.photos.push({src:cv.toDataURL("image/jpeg", 0.72), t:d.toISOString(), l:legende || ""});
+        reste--;
+        if(reste <= 0){ dessine(); touche(); }
+      };
+      img.src = lect.result;
+    };
+    lect.readAsDataURL(f);
+  });
+}
+
+/* --- final --- */
+function vFinal(b){
+  var o = document.createElement("div");
+  o.className = "bloc-blanc";
+  o.innerHTML = '<label class="champ"><span>Observations générales</span><textarea placeholder="Réserves, travaux convenus, éléments non vérifiables ce jour…"></textarea></label>';
+  var ta = el("textarea", o);
+  ta.value = S.observations || "";
+  ta.addEventListener("input", function(){ S.observations = ta.value; touche(); });
+  b.appendChild(o);
+
+  var d = document.createElement("div");
+  d.className = "bloc-blanc";
+  d.innerHTML = '<div class="duo"></div>';
+  el(".duo", d).appendChild(champ("Fait à", "faitA"));
+  el(".duo", d).appendChild(champ("Le", "faitLe", "date"));
+  b.appendChild(d);
+
+  var duoSig = document.createElement("div");
+  duoSig.className = "sigs-duo";
+  b.appendChild(duoSig);
+  [["bailleur","Signature du bailleur"],["locataire","Signature du locataire"]].forEach(function(o2){
+    var s = document.createElement("div");
+    s.className = "sig";
+    s.innerHTML = '<div class="sig-tete"><span>' + o2[1] + '</span><button>Effacer</button></div><canvas></canvas>';
+    duoSig.appendChild(s);
+    initSignature(el("canvas", s), o2[0], el("button", s), S.signatures, S.horodatage);
+  });
+
+  if(S.type === "sortie"){
+    var ec = ecarts();
+    var re = document.createElement("div");
+    re.className = "bloc-blanc";
+    re.innerHTML = "<h3>Comparaison entrée / sortie</h3>";
+    var pe = document.createElement("p");
+    pe.className = "note";
+    if(!ec.length){
+      pe.innerHTML = "Aucun élément noté en dessous de son état d'entrée. <strong>Aucune dégradation détectée</strong> à ce stade.";
+    } else {
+      var deg = ec.filter(function(x){ return x.delta >= 2; }).length;
+      pe.innerHTML = "<strong>" + ec.length + " élément(s)</strong> notés en dessous de leur état d'entrée, dont <strong>" + deg +
+        "</strong> avec un écart d'au moins deux niveaux (dégradation à justifier). Le détail figure dans le document imprimé.";
+    }
+    re.appendChild(pe);
+    b.appendChild(re);
+  }
+
+  var bv = document.createElement("div");
+  bv.className = "bloc-blanc";
+  bv.innerHTML = '<h3>Annexe</h3><label class="bascule"><input type="checkbox"><span>Joindre la grille de vétusté au document</span></label>' +
+    '<p class="note" style="margin-top:8px">Barème indicatif d\'abattement pour usure normale. Il n\'a de valeur contractuelle que si les deux parties l\'acceptent : le signer avec le bail évite l\'essentiel des litiges à la sortie.</p>';
+  var cb = el("input", bv);
+  cb.checked = S.vetuste !== false;
+  cb.addEventListener("change", function(){ S.vetuste = cb.checked; touche(); });
+  b.appendChild(bv);
+
+  if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
+  var lp = document.createElement("div");
+  lp.className = "avant-lab";
+  lp.style.margin = "18px 0 8px";
+  lp.textContent = "Paraphes — initiales reprises en bas de chaque page";
+  b.appendChild(lp);
+
+  var duoPar = document.createElement("div");
+  duoPar.className = "sigs-duo";
+  b.appendChild(duoPar);
+  [["bailleur","Paraphe du bailleur"],["locataire","Paraphe du locataire"]].forEach(function(o3){
+    var s = document.createElement("div");
+    s.className = "sig paraphe-pad";
+    s.innerHTML = '<div class="sig-tete"><span>' + o3[1] + '</span><button>Effacer</button></div><canvas></canvas>';
+    duoPar.appendChild(s);
+    initSignature(el("canvas", s), o3[0], el("button", s), S.paraphes);
+  });
+
+  var n = document.createElement("p");
+  n.className = "note";
+  n.innerHTML = S.type === "sortie"
+    ? "La comparaison avec l'état des lieux d'entrée figure dans le document imprimé, colonne par colonne."
+    : "Le locataire peut demander un complément dans les <strong>10 jours</strong>, et pendant le premier mois de chauffe pour les éléments de chauffage.";
+  b.appendChild(n);
+}
+
+function initSignature(cv, qui, btnEffacer, magasin, journal){
+  magasin = magasin || S.signatures;
+  var ctx = cv.getContext("2d");
+  function dim(){
+    var r = cv.getBoundingClientRect();
+    var img = magasin[qui];
+    cv.width = Math.round(r.width * 2);
+    cv.height = Math.round(r.height * 2);
+    ctx.setTransform(2,0,0,2,0,0);
+    ctx.lineWidth = 1.8; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#15233B";
+    if(img){ var i = new Image(); i.onload = function(){ ctx.drawImage(i, 0, 0, r.width, r.height); }; i.src = img; }
+  }
+  setTimeout(dim, 30);
+  var trace = false;
+  function pos(e){ var r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; }
+  cv.addEventListener("pointerdown", function(e){ trace = true; cv.setPointerCapture(e.pointerId); var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+  cv.addEventListener("pointermove", function(e){ if(!trace) return; var p = pos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+  function fin(){
+    if(!trace) return;
+    trace = false;
+    magasin[qui] = cv.toDataURL("image/png");
+    if(journal) journal[qui] = new Date().toISOString();
+    touche();
+  }
+  cv.addEventListener("pointerup", fin);
+  cv.addEventListener("pointerleave", fin);
+  btnEffacer.addEventListener("click", function(){ ctx.clearRect(0,0,cv.width,cv.height); magasin[qui] = ""; if(journal) journal[qui] = ""; touche(); });
+}
+
+/* --- récapitulatif --- */
+function vRecap(b){
+  var t = etapes();
+  var tot = 0, fts = 0;
+  S.pieces.forEach(function(x){ x.elements.forEach(function(y){ tot++; if(y.etat) fts++; }); });
+  var pct = tot ? Math.round(fts / tot * 100) : 0;
+  var pret = pct === 100 && S.signatures.bailleur && S.signatures.locataire && S.adresse && S.bailleur.nom;
+  var hero = document.createElement("div");
+  hero.className = "hero" + (pret ? " pret" : "");
+  hero.innerHTML = '<span class="pastille grande">' + (pret ? "✅" : "📝") + "</span>" +
+    "<div><b>" + (pret ? "Prêt à signer et à éditer" : "Encore quelques points à compléter") + "</b>" +
+    "<span>" + fts + " élément(s) notés sur " + tot + " · " + S.pieces.length + " pièce(s) · " +
+    (S.signatures.bailleur && S.signatures.locataire ? "signé des deux parties" : "signatures manquantes") + "</span>" +
+    '<div class="jauge-piece plate"><div style="width:' + pct + '%"></div></div></div>';
+  b.appendChild(hero);
+  var r = document.createElement("div");
+  r.className = "recap";
+  t.forEach(function(e, i){
+    if(e.id === "recap") return;
+    var st = "", ko = false;
+    if(e.id === "type"){ st = S.type ? (S.type === "entree" ? "Entrée" : "Sortie") : "à compléter"; ko = !S.type; }
+    else if(e.id === "logement"){ st = S.adresse ? "renseigné" : "à compléter"; ko = !S.adresse; }
+    else if(e.id === "parties"){ st = (S.bailleur.nom && S.locataires[0].nom) ? "renseigné" : "à compléter"; ko = !(S.bailleur.nom && S.locataires[0].nom); }
+    else if(e.id === "compteurs"){ var n = S.compteurs.filter(function(c){ return c.index; }).length; st = n + "/" + S.compteurs.length + " relevés"; ko = !n; }
+    else if(e.id === "cles"){ st = S.cles.length + " ligne(s)"; }
+    else if(e.id === "composition"){ st = S.pieces.length + " pièce(s)"; ko = !S.pieces.length; }
+    else if(e.id === "piece"){ var p = S.pieces[e.i], f = p.elements.filter(function(x){ return x.etat; }).length;
+      st = f + "/" + p.elements.length; ko = f < p.elements.length; }
+    else if(e.id === "final"){ st = (S.signatures.bailleur && S.signatures.locataire) ? ((S.paraphes && S.paraphes.bailleur && S.paraphes.locataire) ? "signé et paraphé" : "signé") : "non signé"; ko = !(S.signatures.bailleur && S.signatures.locataire); }
+    var x = document.createElement("button");
+    x.innerHTML = past(e.ic || "📋", true) + '<span>' + esc(e.titre) + '</span><span class="st' + (ko ? " ko" : "") + '">' + esc(st) + '</span>';
+    x.addEventListener("click", function(){ allerA(i); });
+    r.appendChild(x);
+  });
+  b.appendChild(r);
+
+  var ec2 = ecarts();
+  if(S.type === "sortie" && ec2.length){
+    var av2 = document.createElement("div");
+    av2.className = "bloc-blanc";
+    av2.innerHTML = "<h3>Écarts entrée / sortie</h3>";
+    var ul = document.createElement("div");
+    ec2.slice(0, 6).forEach(function(x){
+      var l = document.createElement("div");
+      l.className = "ecart" + (x.delta >= 2 ? " grave" : "");
+      l.innerHTML = "<b>" + esc(x.piece) + " — " + esc(x.elt) + "</b><span>" + esc(x.avant) + " → " + esc(x.apres) + "</span>";
+      ul.appendChild(l);
+    });
+    if(ec2.length > 6){
+      var pl = document.createElement("p");
+      pl.className = "note";
+      pl.textContent = "… et " + (ec2.length - 6) + " autre(s), détaillés dans le document.";
+      ul.appendChild(pl);
+    }
+    av2.appendChild(ul);
+    b.appendChild(av2);
+  }
+
+  var poids = Math.round(JSON.stringify(S).length / 1048576 * 10) / 10;
+  if(poids >= 3){
+    var pw = document.createElement("p");
+    pw.className = "note alerte";
+    pw.innerHTML = "⚠️ Ce document pèse environ <strong>" + poids + " Mo</strong> (photos incluses). La sauvegarde automatique du navigateur peut être refusée au-delà : enregistre le fichier maintenant.";
+    b.appendChild(pw);
+  }
+
+  var g1 = document.createElement("button");
+  g1.className = "grand";
+  g1.innerHTML = "🖨️  Imprimer / enregistrer en PDF";
+  g1.addEventListener("click", imprimer);
+  b.appendChild(g1);
+
+  var g2 = document.createElement("button");
+  g2.className = "grand secondaire";
+  g2.innerHTML = "💾  Enregistrer le fichier (.json)";
+  g2.addEventListener("click", sauver);
+  b.appendChild(g2);
+
+  if(S.type === "entree"){
+    var g3 = document.createElement("button");
+    g3.className = "grand secondaire";
+    g3.innerHTML = "📦  Préparer l'état des lieux de sortie";
+    g3.addEventListener("click", versSortie);
+    b.appendChild(g3);
+  }
+
+  var n2 = document.createElement("p");
+  n2.className = "note";
+  n2.innerHTML = "Dans la fenêtre d'impression, choisis <strong>Enregistrer au format PDF</strong> comme destination. Conserve aussi le fichier .json : c'est lui qui permettra de générer la sortie plus tard.";
+  b.appendChild(n2);
+}
+
+/* ================= fichier ================= */
+function nomFichier(){
+  var v = (S.ville || S.adresse || "logement").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 28);
+  return "EDL-" + (S.type === "sortie" ? "sortie" : "entree") + "-" + v + "-" + S.date + ".json";
+}
+function sauver(){
+  sauvegarde = true;
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(S)], {type:"application/json"}));
+  a.download = nomFichier();
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
+}
+function charger(txt){
+  try{
+    var o = JSON.parse(txt);
+    if(!o.pieces) throw new Error("format");
+    S = o;
+    if(!S.signatures) S.signatures = {bailleur:"", locataire:""};
+    if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
+    if(!S.horodatage) S.horodatage = {bailleur:"", locataire:""};
+    S.pieces.forEach(function(p){ p.elements.forEach(function(e){ if(!e.photos) e.photos = []; }); });
+    if(attenteSortie){
+      attenteSortie = false;
+      if(S.type === "entree"){ basculeSortie(); }
+      else { S.origineSortie = "fichier"; }
+    }
+    allerA(0);
+  }catch(e){
+    attenteSortie = false;
+    alert("Ce fichier n'est pas un état des lieux lisible. Choisis un fichier .json enregistré depuis cet outil.");
+  }
+}
+function versSortie(){
+  if(S.type === "sortie"){ alert("Ce document est déjà un état des lieux de sortie."); return; }
+  if(!confirm("Créer l'état des lieux de sortie à partir de celui-ci ? Les états relevés à l'entrée seront gardés en référence et les notes repartiront à vide.")) return;
+  basculeSortie();
+  allerA(0);
+}
+function basculeSortie(){
+  S.type = "sortie";
+  S.origineSortie = "fichier";
+  S.date = new Date().toISOString().slice(0,10);
+  S.faitLe = S.date;
+  S.pieces.forEach(function(p){
+    p.elements.forEach(function(e){
+      e.etatEntree = e.etat || "";
+      e.commentaireEntree = e.commentaire || "";
+      e.etat = ""; e.commentaire = ""; e.photos = [];
+    });
+    p.photos = []; p.observations = "";
+  });
+  S.compteurs.forEach(function(c){ c.indexEntree = c.index; c.index2Entree = c.index2; c.index = ""; c.index2 = ""; });
+  S.observations = "";
+  S.signatures = {bailleur:"", locataire:""};
+}
+
+/* ================= document imprimé ================= */
+function docHTML(emp){
+  var sortie = S.type === "sortie";
+  var ns = 4;
+  var h = '<div class="doc-tete"><div><h1>État des lieux ' + (sortie ? "de sortie" : "d'entrée") + '</h1><div>' +
+    esc(S.typeLogement) + " — " + esc(S.adresse) + " — " + esc(S.ville) + '</div></div>' +
+    '<div style="text-align:right;font-family:\'IBM Plex Mono\',monospace">Établi le ' + frDate(S.date) + '</div></div>';
+
+  h += '<h2>1. Le bien et les parties</h2><table class="kv">' +
+    '<tr><td>Logement</td><td>' + esc(S.typeLogement) + (S.surface ? " — " + esc(S.surface) + " m²" : "") + (S.etage ? " — " + esc(S.etage) : "") + " — " + (S.meuble === "oui" ? "meublé" : "non meublé") + '</td></tr>' +
+    '<tr><td>Adresse</td><td>' + esc(S.adresse) + " " + esc(S.ville) + '</td></tr>' +
+    '<tr><td>Bailleur</td><td>' + esc(S.bailleur.nom) + (S.bailleur.adresse ? " — " + esc(S.bailleur.adresse) : "") + (S.bailleur.contact ? " — " + esc(S.bailleur.contact) : "") + '</td></tr>';
+  S.locataires.forEach(function(l, i){
+    h += '<tr><td>Locataire' + (S.locataires.length > 1 ? " " + (i+1) : "") + '</td><td>' + esc(l.nom) + (l.adresse ? " — " + esc(l.adresse) : "") + (l.contact ? " — " + esc(l.contact) : "") + '</td></tr>';
+  });
+  h += '<tr><td>Présents au constat</td><td>' + esc(S.presents) + '</td></tr></table>';
+
+  h += '<h2>2. Relevés de compteurs</h2><table><tr><th>Compteur</th><th>N° / PDL</th>' + (sortie ? "<th>Index à l'entrée</th>" : "") + '<th>Index relevé</th></tr>';
+  S.compteurs.forEach(function(c){
+    h += "<tr><td>" + esc(c.libelle) + "</td><td>" + esc(c.numero) + "</td>" +
+      (sortie ? "<td>" + esc(c.indexEntree || "") + "</td>" : "") +
+      "<td>" + esc(c.index) + " " + esc(c.unite) + "</td></tr>";
+    if(c.libelle2){
+      h += '<tr><td style="padding-left:14px">' + esc(c.libelle) + " — " + esc(c.libelle2) + "</td><td></td>" +
+        (sortie ? "<td>" + esc(c.index2Entree || "") + "</td>" : "") +
+        "<td>" + esc(c.index2 || "") + " " + esc(c.unite) + "</td></tr>";
+    }
+  });
+  h += "</table>";
+
+  h += "<h2>3. Clés et moyens d'accès</h2><table><tr><th>Désignation</th><th>Nombre</th><th>Observations</th></tr>";
+  S.cles.forEach(function(c){ h += "<tr><td>" + esc(c.designation) + "</td><td>" + esc(c.nombre) + "</td><td>" + esc(c.commentaire) + "</td></tr>"; });
+  h += "</table>";
+
+  h += "<h2>4. Description pièce par pièce</h2>";
+  S.pieces.forEach(function(p){
+    h += '<div class="piece-doc"><h3>' + esc(p.nom) + '</h3><table><tr><th style="width:26%">Élément</th>' +
+      (sortie ? '<th style="width:14%">État à l\'entrée</th>' : "") +
+      '<th style="width:7%">Nb</th><th style="width:13%">État constaté</th><th>Observations</th></tr>';
+    p.elements.forEach(function(e){
+      var ph = (e.photos && e.photos.length) ? " (" + e.photos.length + " photo" + (e.photos.length > 1 ? "s" : "") + ")" : "";
+      var baisse = (RANG[e.etatEntree] && RANG[e.etat] && RANG[e.etat] < RANG[e.etatEntree]);
+      h += "<tr" + (baisse ? ' class="baisse"' : "") + "><td>" + esc(e.nom) + "</td>" +
+        (sortie ? "<td>" + esc(NOM_ETAT[e.etatEntree] || "—") + (e.commentaireEntree ? '<br><span style="font-size:8.5px">' + esc(e.commentaireEntree) + "</span>" : "") + "</td>" : "") +
+        "<td>" + esc(e.nb || "") + "</td>" +
+        "<td>" + esc(NOM_ETAT[e.etat] || "—") + "</td><td>" + esc(e.commentaire) + ph + "</td></tr>";
+    });
+    h += "</table>";
+    if(p.observations) h += '<div style="margin:2px 0 4px"><em>Observations : ' + esc(p.observations).replace(/\n/g, "<br>") + "</em></div>";
+    var g = "";
+    p.elements.forEach(function(e){
+      (e.photos || []).forEach(function(o){ g += '<figure><img src="' + srcPhoto(o) + '" alt=""><figcaption>' + esc(p.nom) + " — " + esc(e.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>"; });
+    });
+    (p.photos || []).forEach(function(o){ g += '<figure><img src="' + srcPhoto(o) + '" alt=""><figcaption>' + esc(p.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>"; });
+    if(g) h += '<div class="ph">' + g + "</div>";
+    h += "</div>";
+  });
+
+  if(sortie){
+    ns++;
+    var ec = ecarts();
+    h += "<h2>" + ns + ". Comparaison entrée / sortie</h2>";
+    if(!ec.length){
+      h += "<p>Aucun élément n'a été relevé dans un état inférieur à celui constaté à l'entrée.</p>";
+    } else {
+      h += '<table><tr><th>Pièce</th><th>Élément</th><th>À l\'entrée</th><th>À la sortie</th><th>Lecture</th></tr>';
+      ec.forEach(function(x){
+        h += "<tr" + (x.delta >= 2 ? ' class="baisse"' : "") + "><td>" + esc(x.piece) + "</td><td>" + esc(x.elt) + "</td><td>" +
+          esc(x.avant) + "</td><td>" + esc(x.apres) + "</td><td>" +
+          (x.delta >= 2 ? "Écart de " + x.delta + " niveaux — dégradation à justifier" : "Écart d'un niveau — usure normale probable") + "</td></tr>";
+      });
+      h += "</table><p style=\"font-size:9px\">Lecture indicative. Un écart d'un niveau relève le plus souvent de la vétusté, à la charge du bailleur ; un écart de deux niveaux ou plus peut justifier une retenue sur le dépôt de garantie, après application de la grille de vétusté ci-annexée.</p>";
+    }
+  }
+  ns++;
+  h += "<h2>" + ns + ". Observations et signatures</h2>";
+  h += "<table><tr><td>" + (S.observations ? esc(S.observations).replace(/\n/g, "<br>") : "Néant.") + "</td></tr></table>";
+  h += '<p style="margin:6px 0">Fait à ' + esc(S.faitA || "……………") + ", le " + frDate(S.faitLe) + ", en autant d'exemplaires que de parties, remis à chacune d'elles au moment de la signature.</p>";
+  var ho = S.horodatage || {};
+  h += '<div class="sig-doc"><div><strong>Le bailleur</strong><br>' + esc(S.bailleur.nom) + "<br>" +
+    (S.signatures.bailleur ? '<img src="' + S.signatures.bailleur + '" alt="">' : "") +
+    (ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
+    '<div><strong>Le(s) locataire(s)</strong><br>' + esc(S.locataires.map(function(l){ return l.nom; }).join(", ")) + "<br>" +
+    (S.signatures.locataire ? '<img src="' + S.signatures.locataire + '" alt="">' : "") +
+    (ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
+
+  h += '<div class="mentions">État des lieux établi contradictoirement et amiablement entre les parties, conformément à l\'article 3-2 de la loi n° 89-462 du 6 juillet 1989 et au décret n° 2016-382 du 30 mars 2016. ' +
+    "Il porte sur l'ensemble des locaux et équipements d'usage privatif dont le locataire a la jouissance exclusive. " +
+    "La vétusté s'entend de l'état d'usure ou de détérioration résultant du temps ou de l'usage normal des matériaux et éléments d'équipement du logement. " +
+    (sortie ? "" : "Le locataire peut demander la modification du présent état des lieux dans les dix jours de son établissement, et pendant le premier mois de la période de chauffe pour les éléments de chauffage. ") +
+    "États retenus : neuf, bon état, état d'usage, mauvais état, sans objet. " +
+    "Les photographies annexées sont horodatées à la prise de vue. Les signatures ont été recueillies de façon manuscrite sur écran tactile et horodatées ; elles valent signature manuscrite entre les parties mais ne constituent pas une signature électronique qualifiée au sens du règlement eIDAS." +
+    (emp ? '<br>Empreinte SHA-256 du document : <span style="font-family:\'IBM Plex Mono\',monospace">' + esc(emp) + "</span> — toute modification ultérieure du fichier source modifie cette empreinte." : "") + "</div>";
+  if(S.vetuste !== false){
+    h += '<div class="annexe"><h2>Annexe — Grille de vétusté indicative</h2>' +
+      '<table><tr><th>Élément</th><th>Durée de vie</th><th>Franchise</th><th>Abattement annuel</th><th>Part résiduelle</th></tr>';
+    VETUSTE.forEach(function(v){
+      h += "<tr><td>" + esc(v[0]) + "</td><td>" + v[1] + " ans</td><td>" + v[2] + " an(s)</td><td>" + esc(v[3]) + "</td><td>" + esc(v[4]) + "</td></tr>";
+    });
+    h += '</table><p style="font-size:9px">Mode de calcul : pendant la franchise, aucune somme n\'est due par le locataire. Au-delà, le coût de remise en état est réduit de l\'abattement annuel par année d\'usage, sans descendre sous la part résiduelle laissée à la charge du locataire. ' +
+      "Cette grille n'a de valeur contractuelle qu'après acceptation des deux parties (article 3-2 de la loi du 6 juillet 1989).</p></div>";
+  }
+
+  var par = S.paraphes || {bailleur:"", locataire:""};
+  h += '<div class="pied-page">' +
+    '<div>Paraphe bailleur : ' + (par.bailleur ? '<img src="' + par.bailleur + '" alt="">' : '<span class="vide"></span>') + '</div>' +
+    '<div>Paraphe locataire : ' + (par.locataire ? '<img src="' + par.locataire + '" alt="">' : '<span class="vide"></span>') + '</div>' +
+    '<div class="ref">' + esc(S.adresse || "") + ' — ' + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
+  return h;
+}
+function imprimer(){
+  empreinte(function(emp){
+    el("#impression").innerHTML = docHTML(emp);
+    setTimeout(function(){ window.print(); }, 120);
+  });
+}
+
+/* ================= navigation et menu ================= */
+el("#btn-suivant").addEventListener("click", suivant);
+el("#btn-retour").addEventListener("click", function(){ allerA(pas-1); });
+el("#menu-btn").addEventListener("click", function(e){ e.stopPropagation(); el("#menu").classList.toggle("ouvert"); });
+document.addEventListener("click", function(){ el("#menu").classList.remove("ouvert"); });
+els("#menu button").forEach(function(b){
+  b.addEventListener("click", function(){
+    var a = b.getAttribute("data-act");
+    el("#menu").classList.remove("ouvert");
+    if(a === "sauver") sauver();
+    else if(a === "ouvrir"){ attenteSortie = false; el("#fichier-json").click(); }
+    else if(a === "sortie") versSortie();
+    else if(a === "imprimer") imprimer();
+    else if(a === "recap") allerA(etapes().length - 1);
+    else if(a === "vider"){ if(confirm("Effacer toutes les données saisies ?")){ S = neuf(); allerA(0); } }
+  });
+});
+el("#fichier-json").addEventListener("change", function(ev){
+  var f = ev.target.files[0];
+  if(!f) return;
+  var r = new FileReader();
+  r.onload = function(){ charger(r.result); };
+  r.readAsText(f);
+  ev.target.value = "";
+});
+window.addEventListener("beforeunload", function(ev){
+  if(sauvegarde) return;
+  if(!S.adresse && !S.pieces.length) return;
+  ev.preventDefault();
+  ev.returnValue = "";
+});
+window.addEventListener("beforeprint", function(){ if(!el("#impression").innerHTML) el("#impression").innerHTML = docHTML(""); });
+
+(function demarrer(){
+  function go(){ dessine(); }
+  try{
+    if(window.storage && window.storage.get){
+      window.storage.get("edl:brouillon").then(function(r){
+        if(r && r.value){
+          try{
+            var o = JSON.parse(r.value);
+            if(o && o.pieces){
+              S = o;
+              if(!S.signatures) S.signatures = {bailleur:"", locataire:""};
+    if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
+              if(!S.horodatage) S.horodatage = {bailleur:"", locataire:""};
+              S.pieces.forEach(function(p){ p.elements.forEach(function(e){ if(!e.photos) e.photos = []; }); });
+            }
+          }catch(e){}
+        }
+        go();
+      }).catch(go);
+      return;
+    }
+  }catch(e){}
+  go();
+})();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>

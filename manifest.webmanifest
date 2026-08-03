@@ -1,0 +1,17 @@
+{
+  "name": "État des lieux — entrée & sortie",
+  "short_name": "État des lieux",
+  "description": "Constat locatif d'entrée et de sortie, hors ligne, avec photos et signatures.",
+  "lang": "fr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#E9EDF2",
+  "theme_color": "#15233B",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icone-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
