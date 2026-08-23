@@ -14,7 +14,10 @@
 <title>État des lieux — entrée &amp; sortie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<!-- Polices chargees sans bloquer l'affichage : sur un reseau lent ou un portail
+     captif, l'application doit s'ouvrir immediatement avec les polices systeme
+     plutot que d'attendre une reponse qui peut ne jamais venir. -->
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --papier:#E9EDF2; --carte:#FFFFFF; --encre:#15233B; --encre2:#53637C;
@@ -35,7 +38,7 @@ input,select,textarea{font:inherit;color:inherit}
 .barre-in{max-width:600px;margin:0 auto;padding:11px 16px;display:flex;align-items:center;gap:10px}
 .barre h1{font-size:15px;text-transform:uppercase;letter-spacing:.09em;font-weight:600}
 .barre .marque{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#8EA3C0;margin-left:auto}
-.barre h1{white-space:nowrap}
+.barre h1{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .barre .marque{white-space:nowrap;margin-left:auto}
 .barre .sauve{flex:none;width:18px;height:18px;border-radius:50%;background:#1E7A54;color:#DFF5E8;
   font-size:11px;line-height:18px;text-align:center;opacity:0;transform:scale(.6);
