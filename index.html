@@ -676,6 +676,15 @@ function horodate(d){
 }
 function horoISO(iso){ if(!iso) return ""; try{ return horodate(new Date(iso)); }catch(e){ return ""; } }
 function srcPhoto(o){ return (o && o.src) ? o.src : o; }
+/* Les images du document proviennent parfois d'un fichier .json fourni par
+   l'autre partie (reprise de l'etat des lieux d'entree). On n'accepte donc
+   qu'une image reellement embarquee dans le fichier, et on echappe la valeur :
+   sans cela, un fichier fabrique pourrait injecter du HTML dans le constat
+   ou faire sortir des donnees vers un serveur exterieur. */
+function srcImg(v){
+  v = String(v == null ? "" : v);
+  return /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=\s]*$/.test(v) ? esc(v) : "";
+}
 function tsPhoto(o){ return (o && o.t) ? horoISO(o.t) : ""; }
 function empreinte(cb){
   var txt = JSON.stringify(S);
@@ -1761,9 +1770,15 @@ function docHTML(emp){
     if(p.observations) h += '<div style="margin:2px 0 4px"><em>Observations : ' + esc(p.observations).replace(/\n/g, "<br>") + "</em></div>";
     var g = "";
     p.elements.forEach(function(e){
-      (e.photos || []).forEach(function(o){ g += '<figure><img src="' + srcPhoto(o) + '" alt=""><figcaption>' + esc(p.nom) + " — " + esc(e.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>"; });
+      (e.photos || []).forEach(function(o){
+        var s = srcImg(srcPhoto(o));
+        if(s) g += '<figure><img src="' + s + '" alt=""><figcaption>' + esc(p.nom) + " — " + esc(e.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>";
+      });
     });
-    (p.photos || []).forEach(function(o){ g += '<figure><img src="' + srcPhoto(o) + '" alt=""><figcaption>' + esc(p.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>"; });
+    (p.photos || []).forEach(function(o){
+      var s = srcImg(srcPhoto(o));
+      if(s) g += '<figure><img src="' + s + '" alt=""><figcaption>' + esc(p.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>";
+    });
     if(g) h += '<div class="ph">' + g + "</div>";
     h += "</div>";
   });
@@ -1789,11 +1804,12 @@ function docHTML(emp){
   h += "<table><tr><td>" + (S.observations ? esc(S.observations).replace(/\n/g, "<br>") : "Néant.") + "</td></tr></table>";
   h += '<p style="margin:6px 0">Fait à ' + esc(S.faitA || "……………") + ", le " + frDate(S.faitLe) + ", en autant d'exemplaires que de parties, remis à chacune d'elles au moment de la signature.</p>";
   var ho = S.horodatage || {};
+  var sigB = srcImg(S.signatures.bailleur), sigL = srcImg(S.signatures.locataire);
   h += '<div class="sig-doc"><div><strong>Le bailleur</strong><br>' + esc(S.bailleur.nom) + "<br>" +
-    (S.signatures.bailleur ? '<img src="' + S.signatures.bailleur + '" alt="">' : "") +
+    (sigB ? '<img src="' + sigB + '" alt="">' : "") +
     (ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
     '<div><strong>Le(s) locataire(s)</strong><br>' + esc(S.locataires.map(function(l){ return l.nom; }).join(", ")) + "<br>" +
-    (S.signatures.locataire ? '<img src="' + S.signatures.locataire + '" alt="">' : "") +
+    (sigL ? '<img src="' + sigL + '" alt="">' : "") +
     (ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
 
   h += '<div class="mentions">État des lieux établi contradictoirement et amiablement entre les parties, conformément à l\'article 3-2 de la loi n° 89-462 du 6 juillet 1989 et au décret n° 2016-382 du 30 mars 2016. ' +
@@ -1814,9 +1830,10 @@ function docHTML(emp){
   }
 
   var par = S.paraphes || {bailleur:"", locataire:""};
+  var parB = srcImg(par.bailleur), parL = srcImg(par.locataire);
   h += '<div class="pied-page">' +
-    '<div>Paraphe bailleur : ' + (par.bailleur ? '<img src="' + par.bailleur + '" alt="">' : '<span class="vide"></span>') + '</div>' +
-    '<div>Paraphe locataire : ' + (par.locataire ? '<img src="' + par.locataire + '" alt="">' : '<span class="vide"></span>') + '</div>' +
+    '<div>Paraphe bailleur : ' + (parB ? '<img src="' + parB + '" alt="">' : '<span class="vide"></span>') + '</div>' +
+    '<div>Paraphe locataire : ' + (parL ? '<img src="' + parL + '" alt="">' : '<span class="vide"></span>') + '</div>' +
     '<div class="ref">' + esc(S.adresse || "") + ' — ' + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
   return h;
 }
