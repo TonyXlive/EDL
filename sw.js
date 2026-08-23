@@ -1,6 +1,6 @@
-/* Service worker v11 : application utilisable sans reseau,
+/* Service worker v12 : application utilisable sans reseau,
    mais qui recupere toujours la derniere version quand le reseau est la. */
-var CACHE = "edl-v11";
+var CACHE = "edl-v12";
 var FICHIERS = [
   "./",
   "./index.html",

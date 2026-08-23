@@ -223,8 +223,16 @@ input:focus,select:focus,textarea:focus{background:#fff}
   body{background:#fff}
   .barre,main,.nav,.menu{display:none !important}
   #impression{display:block}
-  @page{size:A4;margin:13mm 12mm 20mm}
+  @page{size:A4;margin:13mm 12mm 18mm}
+  .doc thead{display:table-header-group}
+  .doc tr{page-break-inside:avoid;break-inside:avoid}
+  .doc .piece-doc{page-break-inside:auto;break-inside:auto}
+  .doc .piece-doc h3{page-break-after:avoid;break-after:avoid}
+  .doc h2{page-break-after:avoid;break-after:avoid}
+  .doc .ph figure{page-break-inside:avoid;break-inside:avoid}
+  .doc .pied-page{display:flex !important}
 }
+.doc{padding-bottom:0}
 .doc h1{font-size:19px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
 .doc h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #000}
 .doc .doc-tete{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end}
@@ -232,7 +240,7 @@ input:focus,select:focus,textarea:focus{background:#fff}
 .doc th,.doc td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top}
 .doc th{background:#E8EDF3;font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
 .doc .kv td:first-child{width:32%;background:#F4F7FA;font-weight:600}
-.doc .piece-doc{page-break-inside:avoid;margin-bottom:9px}
+.doc .piece-doc{margin-bottom:9px}
 .doc tr.baisse td{background:#FBEEEC}
 .doc .quand{font-size:8px;color:#444;margin-top:2px}
 .doc .annexe{page-break-before:always}
@@ -245,7 +253,8 @@ input:focus,select:focus,textarea:focus{background:#fff}
 .doc .sig-doc div{flex:1;border:.6px solid #6B7480;padding:5px;min-height:110px}
 .doc .sig-doc img{max-width:100%;max-height:78px}
 .doc .mentions{margin-top:10px;font-size:8.5px;color:#333;line-height:1.4;border-top:.6px solid #6B7480;padding-top:4px}
-.doc .pied-page{position:fixed;bottom:-14mm;left:0;right:0;display:flex;align-items:flex-end;gap:10px;
+.doc .pied-page{display:none;position:fixed;bottom:0;left:0;right:0;height:13mm;
+  align-items:flex-end;gap:10px;background:#fff;
   border-top:.6px solid #6B7480;padding-top:2px;font-size:8px;color:#333}
 .doc .pied-page div{display:flex;align-items:flex-end;gap:4px}
 .doc .pied-page img{height:11mm;max-width:26mm;object-fit:contain}
@@ -1303,10 +1312,26 @@ function vPiece(b, e){
   var o = document.createElement("div");
   o.className = "bloc-blanc";
   o.style.marginTop = "12px";
-  o.innerHTML = '<label class="champ"><span>Observations générales sur la pièce</span><textarea style="min-height:70px"></textarea></label>';
+  o.innerHTML = '<label class="champ"><span>Observations générales sur la pièce</span><textarea style="min-height:70px"></textarea></label>' +
+    '<div class="avant-lab" style="margin:14px 0 0">Photos d\'ensemble de la pièce</div>' +
+    '<div class="photo-actions">' +
+      '<label class="photo-btn"><span class="emo-btn">📷</span><span>Prendre une photo</span>' +
+      '<input type="file" accept="image/*" capture="environment"></label>' +
+      '<label class="photo-btn secondaire"><span class="emo-btn">🖼️</span><span>Depuis la tablette</span>' +
+      '<input type="file" accept="image/*" multiple></label>' +
+    '</div><div class="photos"></div>';
   var ta = el("textarea", o);
   ta.value = p.observations || "";
   ta.addEventListener("input", function(){ p.observations = ta.value; touche(); });
+  if(!p.photos) p.photos = [];
+  els(".photo-actions input", o).forEach(function(inp){
+    inp.addEventListener("click", function(){ enregistreBrouillon(); });
+    inp.addEventListener("change", function(ev){
+      ajoutePhotos(ev.target.files, p, p.nom + " · vue d'ensemble", function(){ dessinePhotos(el(".photos", o), p); });
+      ev.target.value = "";
+    });
+  });
+  dessinePhotos(el(".photos", o), p);
   b.appendChild(o);
 }
 
@@ -1699,7 +1724,7 @@ function docHTML(emp){
   });
   h += '<tr><td>Présents au constat</td><td>' + esc(S.presents) + '</td></tr></table>';
 
-  h += '<h2>2. Relevés de compteurs</h2><table><tr><th>Compteur</th><th>N° / PDL</th>' + (sortie ? "<th>Index à l'entrée</th>" : "") + '<th>Index relevé</th></tr>';
+  h += '<h2>2. Relevés de compteurs</h2><table><thead><tr><th>Compteur</th><th>N° / PDL</th>' + (sortie ? "<th>Index à l'entrée</th>" : "") + '<th>Index relevé</th></tr></thead><tbody>';
   S.compteurs.forEach(function(c){
     h += "<tr><td>" + esc(c.libelle) + "</td><td>" + esc(c.numero) + "</td>" +
       (sortie ? "<td>" + esc(c.indexEntree || "") + "</td>" : "") +
@@ -1712,15 +1737,15 @@ function docHTML(emp){
   });
   h += "</table>";
 
-  h += "<h2>3. Clés et moyens d'accès</h2><table><tr><th>Désignation</th><th>Nombre</th><th>Observations</th></tr>";
+  h += "<h2>3. Clés et moyens d'accès</h2><table><thead><tr><th>Désignation</th><th>Nombre</th><th>Observations</th></tr></thead><tbody>";
   S.cles.forEach(function(c){ h += "<tr><td>" + esc(c.designation) + "</td><td>" + esc(c.nombre) + "</td><td>" + esc(c.commentaire) + "</td></tr>"; });
-  h += "</table>";
+  h += "</tbody></table>";
 
   h += "<h2>4. Description pièce par pièce</h2>";
   S.pieces.forEach(function(p){
-    h += '<div class="piece-doc"><h3>' + esc(p.nom) + '</h3><table><tr><th style="width:26%">Élément</th>' +
+    h += '<div class="piece-doc"><h3>' + esc(p.nom) + '</h3><table><thead><tr><th style="width:26%">Élément</th>' +
       (sortie ? '<th style="width:14%">État à l\'entrée</th>' : "") +
-      '<th style="width:7%">Nb</th><th style="width:13%">État constaté</th><th>Observations</th></tr>';
+      '<th style="width:7%">Nb</th><th style="width:13%">État constaté</th><th>Observations</th></tr></thead><tbody>';
     p.elements.forEach(function(e){
       var ph = (e.photos && e.photos.length) ? " (" + e.photos.length + " photo" + (e.photos.length > 1 ? "s" : "") + ")" : "";
       var baisse = (RANG[e.etatEntree] && RANG[e.etat] && RANG[e.etat] < RANG[e.etatEntree]);
@@ -1729,7 +1754,7 @@ function docHTML(emp){
         "<td>" + esc(e.nb || "") + "</td>" +
         "<td>" + esc(NOM_ETAT[e.etat] || "—") + "</td><td>" + esc(e.commentaire) + ph + "</td></tr>";
     });
-    h += "</table>";
+    h += "</tbody></table>";
     if(p.observations) h += '<div style="margin:2px 0 4px"><em>Observations : ' + esc(p.observations).replace(/\n/g, "<br>") + "</em></div>";
     var g = "";
     p.elements.forEach(function(e){
@@ -1747,7 +1772,7 @@ function docHTML(emp){
     if(!ec.length){
       h += "<p>Aucun élément n'a été relevé dans un état inférieur à celui constaté à l'entrée.</p>";
     } else {
-      h += '<table><tr><th>Pièce</th><th>Élément</th><th>À l\'entrée</th><th>À la sortie</th><th>Lecture</th></tr>';
+      h += '<table><thead><tr><th>Pièce</th><th>Élément</th><th>À l\'entrée</th><th>À la sortie</th><th>Lecture</th></tr></thead><tbody>';
       ec.forEach(function(x){
         h += "<tr" + (x.delta >= 2 ? ' class="baisse"' : "") + "><td>" + esc(x.piece) + "</td><td>" + esc(x.elt) + "</td><td>" +
           esc(x.avant) + "</td><td>" + esc(x.apres) + "</td><td>" +
@@ -1777,7 +1802,7 @@ function docHTML(emp){
     (emp ? '<br>Empreinte SHA-256 du document : <span style="font-family:\'IBM Plex Mono\',monospace">' + esc(emp) + "</span> — toute modification ultérieure du fichier source modifie cette empreinte." : "") + "</div>";
   if(S.vetuste !== false){
     h += '<div class="annexe"><h2>Annexe — Grille de vétusté indicative</h2>' +
-      '<table><tr><th>Élément</th><th>Durée de vie</th><th>Franchise</th><th>Abattement annuel</th><th>Part résiduelle</th></tr>';
+      '<table><thead><tr><th>Élément</th><th>Durée de vie</th><th>Franchise</th><th>Abattement annuel</th><th>Part résiduelle</th></tr></thead><tbody>';
     VETUSTE.forEach(function(v){
       h += "<tr><td>" + esc(v[0]) + "</td><td>" + v[1] + " ans</td><td>" + v[2] + " an(s)</td><td>" + esc(v[3]) + "</td><td>" + esc(v[4]) + "</td></tr>";
     });
