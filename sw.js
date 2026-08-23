@@ -1,5 +1,6 @@
-/* Service worker : rend l'application utilisable sans réseau. */
-var CACHE = "edl-v10";
+/* Service worker v11 : application utilisable sans reseau,
+   mais qui recupere toujours la derniere version quand le reseau est la. */
+var CACHE = "edl-v11";
 var FICHIERS = [
   "./",
   "./index.html",
@@ -11,28 +12,57 @@ var FICHIERS = [
 
 self.addEventListener("install", function(e){
   self.skipWaiting();
-  e.waitUntil(caches.open(CACHE).then(function(c){ return c.addAll(FICHIERS); }));
+  e.waitUntil(
+    caches.open(CACHE).then(function(c){
+      return Promise.all(FICHIERS.map(function(f){
+        return c.add(f).catch(function(){});
+      }));
+    })
+  );
 });
 
 self.addEventListener("activate", function(e){
   e.waitUntil(caches.keys().then(function(k){
-    return Promise.all(k.map(function(n){ return n === CACHE ? null : caches.delete(n); }));
+    return Promise.all(k.map(function(nom){ return nom === CACHE ? null : caches.delete(nom); }));
   }).then(function(){ return self.clients.claim(); }));
 });
 
+function estPage(req){
+  return req.mode === "navigate" ||
+         (req.headers.get("accept") || "").indexOf("text/html") !== -1;
+}
+
 self.addEventListener("fetch", function(e){
-  if(e.request.method !== "GET") return;
-  e.respondWith(
-    caches.match(e.request).then(function(rep){
-      if(rep) return rep;
-      return fetch(e.request).then(function(net){
+  var req = e.request;
+  if(req.method !== "GET") return;
+
+  var url;
+  try{ url = new URL(req.url); }catch(err){ return; }
+  if(url.origin !== self.location.origin) return;
+  if(url.pathname.indexOf("sw.js") !== -1) return;
+
+  if(estPage(req)){
+    e.respondWith(
+      fetch(req, {cache:"no-store"}).then(function(net){
         var copie = net.clone();
-        caches.open(CACHE).then(function(c){
-          try{ c.put(e.request, copie); }catch(err){}
-        });
+        caches.open(CACHE).then(function(c){ c.put("./index.html", copie).catch(function(){}); });
         return net;
       }).catch(function(){
-        return caches.match("./index.html");
+        return caches.match("./index.html").then(function(r){ return r || caches.match("./"); });
+      })
+    );
+    return;
+  }
+
+  e.respondWith(
+    caches.match(req).then(function(rep){
+      if(rep) return rep;
+      return fetch(req).then(function(net){
+        if(net && net.status === 200 && net.type === "basic"){
+          var copie = net.clone();
+          caches.open(CACHE).then(function(c){ c.put(req, copie).catch(function(){}); });
+        }
+        return net;
       });
     })
   );

@@ -35,6 +35,13 @@ input,select,textarea{font:inherit;color:inherit}
 .barre-in{max-width:600px;margin:0 auto;padding:11px 16px;display:flex;align-items:center;gap:10px}
 .barre h1{font-size:15px;text-transform:uppercase;letter-spacing:.09em;font-weight:600}
 .barre .marque{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#8EA3C0;margin-left:auto}
+.barre h1{white-space:nowrap}
+.barre .marque{white-space:nowrap;margin-left:auto}
+.barre .sauve{flex:none;width:18px;height:18px;border-radius:50%;background:#1E7A54;color:#DFF5E8;
+  font-size:11px;line-height:18px;text-align:center;opacity:0;transform:scale(.6);
+  transition:opacity .2s, transform .2s}
+.barre .sauve.vu{opacity:1;transform:scale(1)}
+.barre .sauve.ko{background:#8C2A20;color:#FFE0DC}
 .menu-btn{background:none;border:1px solid #46587A;color:#fff;border-radius:var(--r);padding:5px 9px;line-height:1;font-size:17px}
 .menu{position:absolute;right:16px;top:52px;background:#fff;border:1px solid var(--trait);border-radius:var(--r);box-shadow:0 8px 24px rgba(21,35,59,.18);overflow:hidden;display:none;min-width:220px}
 .menu.ouvert{display:block}
@@ -479,6 +486,7 @@ body.fige{overflow:hidden}
   <div class="barre-in">
     <h1>État des lieux</h1>
     <span class="marque" id="marque"></span>
+    <span class="sauve" id="sauve" title="Brouillon enregistré sur l'appareil"></span>
     <button class="menu-btn" id="menu-btn" aria-label="Menu">☰</button>
   </div>
   <div class="jauge-pas"><div id="jauge" style="width:0"></div></div>
@@ -685,13 +693,103 @@ function frDate(iso){ if(!iso) return "……/……/………"; var d=String(is
 function get(p){ var o=S,a=p.split("."),i; for(i=0;i<a.length;i++){ if(o==null) return ""; o=o[a[i]]; } return o==null?"":o; }
 function set(p,v){ var o=S,a=p.split("."),i; for(i=0;i<a.length-1;i++) o=o[a[i]]; o[a[a.length-1]]=v; touche(); }
 
-var minuteur=null;
+/* ================= sauvegarde automatique ================= */
+var DB = null, DBko = false, CLE = "edl:brouillon";
+function ouvreDB(cb){
+  if(DB) return cb(DB);
+  if(DBko || !window.indexedDB) return cb(null);
+  var fait = false;
+  function fini(d){ if(fait) return; fait = true; cb(d); }
+  try{
+    var r = indexedDB.open("edl-brouillon", 1);
+    r.onupgradeneeded = function(){
+      var d = r.result;
+      if(!d.objectStoreNames.contains("etat")) d.createObjectStore("etat");
+    };
+    r.onsuccess = function(){ DB = r.result; fini(DB); };
+    r.onerror = function(){ DBko = true; fini(null); };
+    r.onblocked = function(){ DBko = true; fini(null); };
+    setTimeout(function(){ if(!fait){ DBko = true; fini(null); } }, 2500);
+  }catch(e){ DBko = true; fini(null); }
+}
+function ecritLS(o, cb){
+  try{ localStorage.setItem(CLE, JSON.stringify(o)); if(cb) cb(true); }
+  catch(e){ if(cb) cb(false); }
+}
+function ecritBrouillon(o, cb){
+  ouvreDB(function(d){
+    if(d){
+      try{
+        var tx = d.transaction("etat", "readwrite");
+        tx.objectStore("etat").put(o, "brouillon");
+        tx.oncomplete = function(){ if(cb) cb(true); };
+        tx.onerror = function(){ ecritLS(o, cb); };
+        tx.onabort = function(){ ecritLS(o, cb); };
+        return;
+      }catch(e){}
+    }
+    ecritLS(o, cb);
+  });
+}
+function litLS(cb){
+  try{
+    var t = localStorage.getItem(CLE);
+    cb(t ? JSON.parse(t) : null);
+  }catch(e){ cb(null); }
+}
+function litBrouillon(cb){
+  ouvreDB(function(d){
+    if(d){
+      try{
+        var tx = d.transaction("etat", "readonly");
+        var q = tx.objectStore("etat").get("brouillon");
+        q.onsuccess = function(){ if(q.result) return cb(q.result); litLS(cb); };
+        q.onerror = function(){ litLS(cb); };
+        return;
+      }catch(e){}
+    }
+    litLS(cb);
+  });
+}
+function videBrouillon(){
+  ouvreDB(function(d){
+    if(d){ try{ d.transaction("etat", "readwrite").objectStore("etat").delete("brouillon"); }catch(e){} }
+    try{ localStorage.removeItem(CLE); }catch(e){}
+  });
+}
+
+var minuteur = null;
+function badge(ok){
+  var m = el("#sauve");
+  if(!m) return;
+  m.textContent = ok ? "\u2713" : "!";
+  m.classList.toggle("ko", !ok);
+  m.setAttribute("title", ok ? "Brouillon enregistr\u00e9 sur l'appareil" : "Enregistrement impossible \u2014 m\u00e9moire pleine");
+  m.classList.add("vu");
+  clearTimeout(badge.h);
+  badge.h = setTimeout(function(){ m.classList.remove("vu"); }, 1600);
+}
+function enregistreBrouillon(cb){
+  if(minuteur){ clearTimeout(minuteur); minuteur = null; }
+  var paquet;
+  try{ paquet = {v:1, pas:pas, quand:Date.now(), s:JSON.parse(JSON.stringify(S))}; }
+  catch(e){ if(cb) cb(false); return; }
+  ecritBrouillon(paquet, function(ok){
+    badge(!!ok);
+    if(!ok && Date.now() - (enregistreBrouillon.avert || 0) > 60000){
+      enregistreBrouillon.avert = Date.now();
+      signale("Mémoire de l'appareil saturée : enregistre le fichier .json sans tarder.");
+    }
+    if(cb) cb(ok);
+  });
+}
+function planifie(){
+  if(minuteur) clearTimeout(minuteur);
+  minuteur = setTimeout(function(){ enregistreBrouillon(); }, 600);
+}
 function touche(){
   sauvegarde = false;
-  if(minuteur) clearTimeout(minuteur);
-  minuteur=setTimeout(function(){
-    try{ if(window.storage && window.storage.set) window.storage.set("edl:brouillon", JSON.stringify(S)).catch(function(){}); }catch(e){}
-  }, 700);
+  planifie();
 }
 
 /* ================= étapes ================= */
@@ -783,9 +881,10 @@ function dessine(){
 
   var b = el("#ecran");
   b.innerHTML = "";
+  padsSig = [];
   ({type:vType, logement:vLogement, parties:vParties, compteurs:vCompteurs,
     cles:vCles, composition:vComposition, piece:vPiece, final:vFinal, recap:vRecap})[e.id](b, e);
-  touche();
+  planifie();
 }
 
 function lie(inp, chemin){
@@ -1179,7 +1278,12 @@ function vPiece(b, e){
     com.addEventListener("input", function(){ x.commentaire = com.value; touche(); });
 
     els(".photo-actions input", d).forEach(function(inp){
-      inp.addEventListener("change", function(ev){ ajoutePhotos(ev.target.files, x, p.nom + " · " + x.nom); ev.target.value = ""; });
+      inp.addEventListener("click", function(){ enregistreBrouillon(); });
+      inp.addEventListener("change", function(ev){
+        var fs = ev.target.files;
+        ajoutePhotos(fs, x, p.nom + " · " + x.nom, function(){ dessinePhotos(el(".photos", d), x); });
+        ev.target.value = "";
+      });
     });
     dessinePhotos(el(".photos", d), x);
 
@@ -1218,46 +1322,94 @@ function dessinePhotos(box, cible){
     box.appendChild(c);
   });
 }
-function ajoutePhotos(files, cible, legende){
+function ajoutePhotos(files, cible, legende, apres){
   if(!cible.photos) cible.photos = [];
-  var reste = files.length;
-  Array.prototype.forEach.call(files, function(f){
-    var lect = new FileReader();
-    lect.onload = function(){
-      var img = new Image();
-      img.onload = function(){
-        var max = 1400, r = Math.min(1, max / Math.max(img.width, img.height));
-        var cv = document.createElement("canvas");
-        cv.width = Math.round(img.width * r);
-        cv.height = Math.round(img.height * r);
-        var c = cv.getContext("2d");
-        c.drawImage(img, 0, 0, cv.width, cv.height);
+  var liste = Array.prototype.slice.call(files || []);
+  if(!liste.length) return;
+  signale(liste.length > 1 ? "Traitement de " + liste.length + " photos…" : "Traitement de la photo…");
+  var ko = 0, i = 0;
+  function suite(){
+    if(i >= liste.length){
+      if(ko) signale(ko + " photo(s) n'ont pas pu être ajoutées.");
+      else signale(liste.length > 1 ? liste.length + " photos ajoutées." : "Photo ajoutée.");
+      enregistreBrouillon();
+      return;
+    }
+    var f = liste[i++];
+    traitePhoto(f, legende, function(o){
+      if(o) cible.photos.push(o); else ko++;
+      if(apres) apres();
+      touche();
+      setTimeout(suite, 40);
+    });
+  }
+  suite();
+}
 
-        var d = new Date();
-        var t = horodate(d);
-        var taille = Math.max(13, Math.round(cv.width * 0.026));
-        var bande = Math.round(taille * 2.1);
-        c.fillStyle = "rgba(15,20,29,.74)";
-        c.fillRect(0, cv.height - bande, cv.width, bande);
-        c.textBaseline = "middle";
-        c.font = "600 " + taille + "px 'IBM Plex Mono', ui-monospace, monospace";
-        c.fillStyle = "#F2C14E";
-        c.fillText(t, taille * 0.7, cv.height - bande / 2);
-        if(legende){
-          c.font = "500 " + Math.round(taille * 0.92) + "px 'Public Sans', sans-serif";
-          c.fillStyle = "#E8EEF7";
-          c.textAlign = "right";
-          c.fillText(legende, cv.width - taille * 0.7, cv.height - bande / 2);
-          c.textAlign = "left";
-        }
-        cible.photos.push({src:cv.toDataURL("image/jpeg", 0.72), t:d.toISOString(), l:legende || ""});
-        reste--;
-        if(reste <= 0){ dessine(); touche(); }
-      };
-      img.src = lect.result;
-    };
-    lect.readAsDataURL(f);
-  });
+function traitePhoto(f, legende, cb){
+  var fait = false, u = null;
+  var garde = setTimeout(function(){ termine(null); }, 25000);
+  function termine(o){
+    if(fait) return;
+    fait = true;
+    clearTimeout(garde);
+    if(u){ try{ URL.revokeObjectURL(u); }catch(e){} u = null; }
+    cb(o);
+  }
+  function rendu(src, w, h2){
+    if(fait) return;
+    var o = null;
+    try{
+      var max = 1400, r = Math.min(1, max / Math.max(w, h2));
+      var cv = document.createElement("canvas");
+      cv.width = Math.max(1, Math.round(w * r));
+      cv.height = Math.max(1, Math.round(h2 * r));
+      var c = cv.getContext("2d");
+      c.drawImage(src, 0, 0, cv.width, cv.height);
+      if(src && src.close){ try{ src.close(); }catch(e){} }
+
+      var d = new Date();
+      var t = horodate(d);
+      var taille = Math.max(13, Math.round(cv.width * 0.026));
+      var bande = Math.round(taille * 2.1);
+      c.fillStyle = "rgba(15,20,29,.74)";
+      c.fillRect(0, cv.height - bande, cv.width, bande);
+      c.textBaseline = "middle";
+      c.font = "600 " + taille + "px 'IBM Plex Mono', ui-monospace, monospace";
+      c.fillStyle = "#F2C14E";
+      c.fillText(t, taille * 0.7, cv.height - bande / 2);
+      if(legende){
+        c.font = "500 " + Math.round(taille * 0.92) + "px 'Public Sans', sans-serif";
+        c.fillStyle = "#E8EEF7";
+        c.textAlign = "right";
+        c.fillText(legende, cv.width - taille * 0.7, cv.height - bande / 2);
+        c.textAlign = "left";
+      }
+      o = {src:cv.toDataURL("image/jpeg", 0.7), t:d.toISOString(), l:legende || ""};
+      cv.width = 1; cv.height = 1;
+    }catch(e){ o = null; }
+    termine(o);
+  }
+  function viaURL(){
+    if(fait) return;
+    try{
+      u = URL.createObjectURL(f);
+      var img = new Image();
+      img.onload = function(){ rendu(img, img.naturalWidth || img.width, img.naturalHeight || img.height); };
+      img.onerror = function(){ termine(null); };
+      img.src = u;
+    }catch(e){ termine(null); }
+  }
+  if(window.createImageBitmap){
+    var pr;
+    try{ pr = createImageBitmap(f, {imageOrientation:"from-image"}); }
+    catch(e){ try{ pr = createImageBitmap(f); }catch(e2){ pr = null; } }
+    if(pr && pr.then){
+      pr.then(function(bm){ rendu(bm, bm.width, bm.height); }, function(){ viaURL(); });
+      return;
+    }
+  }
+  viaURL();
 }
 
 /* --- final --- */
@@ -1352,6 +1504,11 @@ function vFinal(b){
   b.appendChild(n);
 }
 
+var padsSig = [];
+window.addEventListener("resize", function(){
+  clearTimeout(window.__hSig);
+  window.__hSig = setTimeout(function(){ padsSig.forEach(function(f){ try{ f(); }catch(e){} }); }, 250);
+});
 function initSignature(cv, qui, btnEffacer, magasin, journal){
   magasin = magasin || S.signatures;
   var ctx = cv.getContext("2d");
@@ -1365,6 +1522,7 @@ function initSignature(cv, qui, btnEffacer, magasin, journal){
     if(img){ var i = new Image(); i.onload = function(){ ctx.drawImage(i, 0, 0, r.width, r.height); }; i.src = img; }
   }
   setTimeout(dim, 30);
+  padsSig.push(dim);
   var trace = false;
   function pos(e){ var r = cv.getBoundingClientRect(); return {x:e.clientX - r.left, y:e.clientY - r.top}; }
   cv.addEventListener("pointerdown", function(e){ trace = true; cv.setPointerCapture(e.pointerId); var p = pos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
@@ -1378,6 +1536,7 @@ function initSignature(cv, qui, btnEffacer, magasin, journal){
   }
   cv.addEventListener("pointerup", fin);
   cv.addEventListener("pointerleave", fin);
+  cv.addEventListener("pointercancel", fin);
   btnEffacer.addEventListener("click", function(){ ctx.clearRect(0,0,cv.width,cv.height); magasin[qui] = ""; if(journal) journal[qui] = ""; touche(); });
 }
 
@@ -1403,7 +1562,7 @@ function vRecap(b){
     var st = "", ko = false;
     if(e.id === "type"){ st = S.type ? (S.type === "entree" ? "Entrée" : "Sortie") : "à compléter"; ko = !S.type; }
     else if(e.id === "logement"){ st = S.adresse ? "renseigné" : "à compléter"; ko = !S.adresse; }
-    else if(e.id === "parties"){ st = (S.bailleur.nom && S.locataires[0].nom) ? "renseigné" : "à compléter"; ko = !(S.bailleur.nom && S.locataires[0].nom); }
+    else if(e.id === "parties"){ var ok0 = !!(S.bailleur && S.bailleur.nom && S.locataires[0] && S.locataires[0].nom); st = ok0 ? "renseigné" : "à compléter"; ko = !ok0; }
     else if(e.id === "compteurs"){ var n = S.compteurs.filter(function(c){ return c.index; }).length; st = n + "/" + S.compteurs.length + " relevés"; ko = !n; }
     else if(e.id === "cles"){ st = S.cles.length + " ligne(s)"; }
     else if(e.id === "composition"){ st = S.pieces.length + " pièce(s)"; ko = !S.pieces.length; }
@@ -1443,7 +1602,7 @@ function vRecap(b){
   if(poids >= 3){
     var pw = document.createElement("p");
     pw.className = "note alerte";
-    pw.innerHTML = "⚠️ Ce document pèse environ <strong>" + poids + " Mo</strong> (photos incluses). La sauvegarde automatique du navigateur peut être refusée au-delà : enregistre le fichier maintenant.";
+    pw.innerHTML = "ℹ️ Ce document pèse environ <strong>" + poids + " Mo</strong> (photos incluses). Il est bien conservé sur l'appareil, mais pense à enregistrer le fichier .json pour en garder une copie.";
     b.appendChild(pw);
   }
 
@@ -1485,13 +1644,9 @@ function sauver(){
 }
 function charger(txt){
   try{
-    var o = JSON.parse(txt);
-    if(!o.pieces) throw new Error("format");
+    var o = repare(JSON.parse(txt));
+    if(!o) throw new Error("format");
     S = o;
-    if(!S.signatures) S.signatures = {bailleur:"", locataire:""};
-    if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
-    if(!S.horodatage) S.horodatage = {bailleur:"", locataire:""};
-    S.pieces.forEach(function(p){ p.elements.forEach(function(e){ if(!e.photos) e.photos = []; }); });
     if(attenteSortie){
       attenteSortie = false;
       if(S.type === "entree"){ basculeSortie(); }
@@ -1691,7 +1846,7 @@ els("#menu button").forEach(function(b){
     else if(a === "imprimer") terminer();
     else if(a === "apercu") apercu();
     else if(a === "recap") allerA(etapes().length - 1);
-    else if(a === "vider"){ if(confirm("Effacer toutes les données saisies ?")){ S = neuf(); allerA(0); } }
+    else if(a === "vider"){ if(confirm("Effacer toutes les données saisies ?")){ videBrouillon(); S = neuf(); pas = 0; sauvegarde = true; setTimeout(function(){ dessine(); enregistreBrouillon(); }, 60); } }
   });
 });
 el("#fichier-json").addEventListener("change", function(ev){
@@ -1710,35 +1865,70 @@ window.addEventListener("beforeunload", function(ev){
 });
 window.addEventListener("beforeprint", function(){ if(!el("#impression").innerHTML) el("#impression").innerHTML = docHTML(""); });
 
+function repare(o){
+  if(!o || typeof o !== "object" || !o.pieces) return null;
+  if(!Array.isArray(o.pieces)) return null;
+  if(!o.signatures) o.signatures = {bailleur:"", locataire:""};
+  if(!o.paraphes) o.paraphes = {bailleur:"", locataire:""};
+  if(!o.horodatage) o.horodatage = {bailleur:"", locataire:""};
+  if(!o.bailleur) o.bailleur = {nom:"", contact:"", adresse:""};
+  if(!Array.isArray(o.locataires) || !o.locataires.length) o.locataires = [{nom:"", contact:"", adresse:""}];
+  if(!Array.isArray(o.compteurs)) o.compteurs = [];
+  if(!Array.isArray(o.cles)) o.cles = [];
+  o.pieces.forEach(function(p){
+    if(!Array.isArray(p.elements)) p.elements = [];
+    if(!Array.isArray(p.photos)) p.photos = [];
+    p.elements.forEach(function(e){ if(!Array.isArray(e.photos)) e.photos = []; });
+  });
+  return o;
+}
+
 (function demarrer(){
-  function go(){ dessine(); }
+  var lance = false;
+  function go(){ if(lance) return; lance = true; dessine(); }
+  var secours = setTimeout(go, 3500);
   try{
-    if(window.storage && window.storage.get){
-      window.storage.get("edl:brouillon").then(function(r){
-        if(r && r.value){
-          try{
-            var o = JSON.parse(r.value);
-            if(o && o.pieces){
-              S = o;
-              if(!S.signatures) S.signatures = {bailleur:"", locataire:""};
-    if(!S.paraphes) S.paraphes = {bailleur:"", locataire:""};
-              if(!S.horodatage) S.horodatage = {bailleur:"", locataire:""};
-              S.pieces.forEach(function(p){ p.elements.forEach(function(e){ if(!e.photos) e.photos = []; }); });
-              if(S.adresse || S.pieces.length) setTimeout(function(){ signale("Brouillon repris là où tu t'étais arrêté."); }, 600);
-            }
-          }catch(e){}
+    litBrouillon(function(r){
+      clearTimeout(secours);
+      try{
+        var o = r && r.s ? r.s : r;
+        var v = repare(o);
+        if(v){
+          S = v;
+          sauvegarde = true;
+          var etp = etapes();
+          var np = (r && typeof r.pas === "number") ? r.pas : 0;
+          pas = Math.max(0, Math.min(np, etp.length - 1));
+          if(S.adresse || S.pieces.length){
+            setTimeout(function(){ signale("Reprise automatique : tout a été retrouvé."); }, 500);
+          }
         }
-        go();
-      }).catch(go);
-      return;
-    }
-  }catch(e){}
-  go();
+      }catch(e){}
+      go();
+    });
+  }catch(e){ clearTimeout(secours); go(); }
 })();
+
+/* filet de sécurité : l'application peut être fermée par le système
+   pendant la prise de vue — on écrit dès que la page passe en arrière-plan */
+document.addEventListener("visibilitychange", function(){
+  if(document.visibilityState === "hidden") enregistreBrouillon();
+});
+window.addEventListener("pagehide", function(){ enregistreBrouillon(); });
+window.addEventListener("blur", function(){ enregistreBrouillon(); });
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
-    navigator.serviceWorker.register("sw.js").catch(function(){});
+    navigator.serviceWorker.register("sw.js").then(function(reg){
+      try{ reg.update(); }catch(e){}
+      setInterval(function(){ try{ reg.update(); }catch(e){} }, 60 * 60 * 1000);
+    }).catch(function(){});
+    var recharge = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if(recharge) return;
+      recharge = true;
+      enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
+    });
   });
 }
 </script>
