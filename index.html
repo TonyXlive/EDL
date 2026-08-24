@@ -226,25 +226,33 @@ input:focus,select:focus,textarea:focus{background:#fff}
   body{background:#fff !important}
   .barre,main,.nav,.menu,.toast{display:none !important}
   #impression{display:block}
-  @page{size:A4;margin:13mm 12mm 18mm}
+  @page{size:A4;margin:13mm 12mm 13mm}
   .doc thead{display:table-header-group}
   .doc tr{page-break-inside:avoid;break-inside:avoid}
   .doc .piece-doc{page-break-inside:auto;break-inside:auto}
   .doc .piece-doc h3{page-break-after:avoid;break-after:avoid}
   .doc h2{page-break-after:avoid;break-after:avoid}
   .doc .ph figure{page-break-inside:avoid;break-inside:avoid}
-  .doc .pied-page{display:flex !important}
+  /* Ossature qui repete le pied de page en bas de chaque page imprimee. Ses
+     propres lignes doivent pouvoir se couper, sinon tout le document serait
+     traite comme un bloc insecable. */
+  .doc .mise>tfoot{display:table-footer-group}
+  .doc .mise>tbody>tr,.doc .mise>tfoot>tr{page-break-inside:auto;break-inside:auto}
 }
 .doc{padding-bottom:0}
 .doc h1{font-size:19px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
 .doc h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #000}
 .doc .doc-tete{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end}
 .doc table{width:100%;border-collapse:collapse;margin-bottom:4px}
-.doc th,.doc td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top}
+/* overflow-wrap:anywhere : sans cela, un mot tres long (URL, reference sans
+   espace) elargit sa colonne au-dela de la page et le texte des colonnes
+   suivantes est coupe net au bord du papier. */
+.doc th,.doc td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 .doc th{background:#E8EDF3;font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
 .doc .kv td:first-child{width:32%;background:#F4F7FA;font-weight:600}
 .doc .piece-doc{margin-bottom:9px}
 .doc tr.baisse td{background:#FBEEEC}
+.doc tr.baisse-legere td{background:#FBF6EC}
 .doc .quand{font-size:8px;color:#444;margin-top:2px}
 .doc .annexe{page-break-before:always}
 .doc .piece-doc h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:#000;color:#fff;padding:2px 6px;margin:0 0 3px}
@@ -256,8 +264,12 @@ input:focus,select:focus,textarea:focus{background:#fff}
 .doc .sig-doc div{flex:1;border:.6px solid #6B7480;padding:5px;min-height:110px}
 .doc .sig-doc img{max-width:100%;max-height:78px}
 .doc .mentions{margin-top:10px;font-size:8.5px;color:#333;line-height:1.4;border-top:.6px solid #6B7480;padding-top:4px}
-.doc .pied-page{display:none;position:fixed;bottom:0;left:0;right:0;height:13mm;
-  align-items:flex-end;gap:10px;background:#fff;
+/* Ossature du document : une seule cellule qui porte tout le corps, plus un
+   <tfoot> repete en bas de chaque page a l'impression. Elle ne doit rien
+   changer a l'apparence, d'ou l'absence de bordure et de marge interieure. */
+.doc .mise{width:100%;border-collapse:collapse}
+.doc .mise>tbody>tr>td,.doc .mise>tfoot>tr>td{border:0;padding:0}
+.doc .pied-page{display:flex;align-items:flex-end;gap:10px;min-height:12mm;
   border-top:.6px solid #6B7480;padding-top:2px;font-size:8px;color:#333}
 .doc .pied-page div{display:flex;align-items:flex-end;gap:4px}
 .doc .pied-page img{height:11mm;max-width:26mm;object-fit:contain}
@@ -710,7 +722,9 @@ function ecarts(){
   });
   return r;
 }
-function frDate(iso){ if(!iso) return "……/……/………"; var d=String(iso).split("-"); return d.length<3?iso:d[2]+"/"+d[1]+"/"+d[0]; }
+/* Le resultat est insere dans le document : il doit etre echappe, la date
+   pouvant venir d'un fichier .json ouvert depuis l'exterieur. */
+function frDate(iso){ if(!iso) return "……/……/………"; var d=String(iso).split("-"); return esc(d.length<3?iso:d[2]+"/"+d[1]+"/"+d[0]); }
 function get(p){ var o=S,a=p.split("."),i; for(i=0;i<a.length;i++){ if(o==null) return ""; o=o[a[i]]; } return o==null?"":o; }
 function set(p,v){ var o=S,a=p.split("."),i; for(i=0;i<a.length-1;i++) o=o[a[i]]; o[a[a.length-1]]=v; touche(); }
 
@@ -881,7 +895,12 @@ function suivant(){
 
 /* ================= rendu ================= */
 function dessine(){
-  var t = etapes(), e = t[pas];
+  var t = etapes();
+  /* Le nombre d'etapes depend du nombre de pieces : si celui-ci diminue alors
+     qu'on se trouve plus loin, l'etape courante doit etre ramenee dans les
+     bornes. Sans ce filet, l'ecran resterait blanc sans aucun moyen de revenir. */
+  pas = Math.max(0, Math.min(pas, t.length - 1));
+  var e = t[pas];
   el("#icone-pas").textContent = e.ic || "📋";
   el("#compte-pas").textContent = "Étape " + (pas+1) + " sur " + t.length;
   el("#titre-pas").textContent = e.titre;
@@ -956,7 +975,7 @@ function vType(b){
       x.setAttribute("aria-pressed", S.origineSortie === o[0]);
       x.innerHTML = '<span class="emo">' + o[2] + "</span><span>" + o[1] + "</span><em>" + o[3] + "</em>";
       x.addEventListener("click", function(){
-        if(o[0] === "fichier"){ attenteSortie = true; el("#fichier-json").click(); }
+        if(o[0] === "fichier"){ ouvreFichier(true); }
         else { S.origineSortie = "manuelle"; dessine(); }
       });
       c2.appendChild(x);
@@ -1679,6 +1698,16 @@ function sauver(){
   a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
 }
+/* Vrai si une visite est en cours et n'a pas encore ete enregistree :
+   ouvrir un fichier ecraserait ce travail sans retour possible. */
+function travailEnCours(){
+  return !sauvegarde && !!(S.adresse || S.pieces.length);
+}
+function ouvreFichier(pourSortie){
+  if(travailEnCours() && !confirm("Un état des lieux est en cours et n'a pas été enregistré. Ouvrir un fichier va le remplacer définitivement. Continuer ?")) return;
+  attenteSortie = !!pourSortie;
+  el("#fichier-json").click();
+}
 function charger(txt){
   try{
     var o = repare(JSON.parse(txt));
@@ -1699,6 +1728,9 @@ function versSortie(){
   if(S.type === "sortie"){ alert("Ce document est déjà un état des lieux de sortie."); return; }
   if(!confirm("Créer l'état des lieux de sortie à partir de celui-ci ? Les états relevés à l'entrée seront gardés en référence et les notes repartiront à vide.")) return;
   basculeSortie();
+  /* Cette sortie est derivee de l'entree ouverte, pas d'un fichier choisi :
+     aucune des deux cartes de l'etape 1 ne doit apparaitre selectionnee. */
+  S.origineSortie = "reprise";
   allerA(0);
 }
 function basculeSortie(){
@@ -1716,35 +1748,50 @@ function basculeSortie(){
   });
   S.compteurs.forEach(function(c){ c.indexEntree = c.index; c.index2Entree = c.index2; c.index = ""; c.index2 = ""; });
   S.observations = "";
+  /* Le document de sortie doit repartir vierge de toute trace de signature :
+     sans cela il porterait les paraphes de l'entree sur chaque page et la
+     mention « Signé le … » a la date de l'entree, alors que personne n'a
+     encore signé la sortie. */
   S.signatures = {bailleur:"", locataire:""};
+  S.horodatage = {bailleur:"", locataire:""};
+  S.paraphes = {bailleur:"", locataire:""};
 }
 
 /* ================= document imprimé ================= */
 function docHTML(emp){
   var sortie = S.type === "sortie";
   var ns = 4;
+  /* Assemble en ignorant les champs vides : sans cela un logement dont le type
+     n'est pas renseigne produisait « — 12 rue des Lilas » ou « — non meublé ». */
+  function joint(parties){
+    return parties.filter(function(x){ return x != null && String(x).trim() !== ""; })
+                  .map(function(x){ return esc(x); }).join(" — ");
+  }
   var h = '<div class="doc-tete"><div><h1>État des lieux ' + (sortie ? "de sortie" : "d'entrée") + '</h1><div>' +
-    esc(S.typeLogement) + " — " + esc(S.adresse) + " — " + esc(S.ville) + '</div></div>' +
+    joint([S.typeLogement, S.adresse, S.ville]) + '</div></div>' +
     '<div style="text-align:right;font-family:\'IBM Plex Mono\',monospace">Établi le ' + frDate(S.date) + '</div></div>';
 
   h += '<h2>1. Le bien et les parties</h2><table class="kv">' +
-    '<tr><td>Logement</td><td>' + esc(S.typeLogement) + (S.surface ? " — " + esc(S.surface) + " m²" : "") + (S.etage ? " — " + esc(S.etage) : "") + " — " + (S.meuble === "oui" ? "meublé" : "non meublé") + '</td></tr>' +
+    '<tr><td>Logement</td><td>' + joint([S.typeLogement, S.surface ? S.surface + " m²" : "", S.etage, S.meuble === "oui" ? "meublé" : "non meublé"]) + '</td></tr>' +
     '<tr><td>Adresse</td><td>' + esc(S.adresse) + " " + esc(S.ville) + '</td></tr>' +
-    '<tr><td>Bailleur</td><td>' + esc(S.bailleur.nom) + (S.bailleur.adresse ? " — " + esc(S.bailleur.adresse) : "") + (S.bailleur.contact ? " — " + esc(S.bailleur.contact) : "") + '</td></tr>';
+    '<tr><td>Bailleur</td><td>' + joint([S.bailleur.nom, S.bailleur.adresse, S.bailleur.contact]) + '</td></tr>';
   S.locataires.forEach(function(l, i){
-    h += '<tr><td>Locataire' + (S.locataires.length > 1 ? " " + (i+1) : "") + '</td><td>' + esc(l.nom) + (l.adresse ? " — " + esc(l.adresse) : "") + (l.contact ? " — " + esc(l.contact) : "") + '</td></tr>';
+    h += '<tr><td>Locataire' + (S.locataires.length > 1 ? " " + (i+1) : "") + '</td><td>' + joint([l.nom, l.adresse, l.contact]) + '</td></tr>';
   });
   h += '<tr><td>Présents au constat</td><td>' + esc(S.presents) + '</td></tr></table>';
 
   h += '<h2>2. Relevés de compteurs</h2><table><thead><tr><th>Compteur</th><th>N° / PDL</th>' + (sortie ? "<th>Index à l'entrée</th>" : "") + '<th>Index relevé</th></tr></thead><tbody>';
+  /* Une unite seule (« kWh ») dans une case ferait croire a un releve effectue :
+     une case non renseignee doit rester vide. */
+  function releve(v, unite){ v = (v == null ? "" : String(v)).trim(); return v ? esc(v) + " " + esc(unite) : ""; }
   S.compteurs.forEach(function(c){
     h += "<tr><td>" + esc(c.libelle) + "</td><td>" + esc(c.numero) + "</td>" +
       (sortie ? "<td>" + esc(c.indexEntree || "") + "</td>" : "") +
-      "<td>" + esc(c.index) + " " + esc(c.unite) + "</td></tr>";
+      "<td>" + releve(c.index, c.unite) + "</td></tr>";
     if(c.libelle2){
       h += '<tr><td style="padding-left:14px">' + esc(c.libelle) + " — " + esc(c.libelle2) + "</td><td></td>" +
         (sortie ? "<td>" + esc(c.index2Entree || "") + "</td>" : "") +
-        "<td>" + esc(c.index2 || "") + " " + esc(c.unite) + "</td></tr>";
+        "<td>" + releve(c.index2, c.unite) + "</td></tr>";
     }
   });
   h += "</table>";
@@ -1760,8 +1807,14 @@ function docHTML(emp){
       '<th style="width:7%">Nb</th><th style="width:13%">État constaté</th><th>Observations</th></tr></thead><tbody>';
     p.elements.forEach(function(e){
       var ph = (e.photos && e.photos.length) ? " (" + e.photos.length + " photo" + (e.photos.length > 1 ? "s" : "") + ")" : "";
-      var baisse = (RANG[e.etatEntree] && RANG[e.etat] && RANG[e.etat] < RANG[e.etatEntree]);
-      h += "<tr" + (baisse ? ' class="baisse"' : "") + "><td>" + esc(e.nom) + "</td>" +
+      /* Meme lecture que la section « Comparaison entrée / sortie » : le rouge
+         signale une degradation a justifier (au moins deux niveaux), la teinte
+         legere un simple ecart d'un niveau. Sans cette distinction, une ligne
+         etait surlignee comme un probleme ici et decrite comme une usure
+         normale quelques pages plus loin. */
+      var chute = (RANG[e.etatEntree] && RANG[e.etat]) ? RANG[e.etatEntree] - RANG[e.etat] : 0;
+      var cl = chute >= 2 ? ' class="baisse"' : (chute === 1 ? ' class="baisse-legere"' : "");
+      h += "<tr" + cl + "><td>" + esc(e.nom) + "</td>" +
         (sortie ? "<td>" + esc(NOM_ETAT[e.etatEntree] || "—") + (e.commentaireEntree ? '<br><span style="font-size:8.5px">' + esc(e.commentaireEntree) + "</span>" : "") + "</td>" : "") +
         "<td>" + esc(e.nb || "") + "</td>" +
         "<td>" + esc(NOM_ETAT[e.etat] || "—") + "</td><td>" + esc(e.commentaire) + ph + "</td></tr>";
@@ -1807,10 +1860,10 @@ function docHTML(emp){
   var sigB = srcImg(S.signatures.bailleur), sigL = srcImg(S.signatures.locataire);
   h += '<div class="sig-doc"><div><strong>Le bailleur</strong><br>' + esc(S.bailleur.nom) + "<br>" +
     (sigB ? '<img src="' + sigB + '" alt="">' : "") +
-    (ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
+    (sigB && ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
     '<div><strong>Le(s) locataire(s)</strong><br>' + esc(S.locataires.map(function(l){ return l.nom; }).join(", ")) + "<br>" +
     (sigL ? '<img src="' + sigL + '" alt="">' : "") +
-    (ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
+    (sigL && ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
 
   h += '<div class="mentions">État des lieux établi contradictoirement et amiablement entre les parties, conformément à l\'article 3-2 de la loi n° 89-462 du 6 juillet 1989 et au décret n° 2016-382 du 30 mars 2016. ' +
     "Il porte sur l'ensemble des locaux et équipements d'usage privatif dont le locataire a la jouissance exclusive. " +
@@ -1831,24 +1884,35 @@ function docHTML(emp){
 
   var par = S.paraphes || {bailleur:"", locataire:""};
   var parB = srcImg(par.bailleur), parL = srcImg(par.locataire);
-  h += '<div class="pied-page">' +
+  var pied = '<div class="pied-page">' +
     '<div>Paraphe bailleur : ' + (parB ? '<img src="' + parB + '" alt="">' : '<span class="vide"></span>') + '</div>' +
     '<div>Paraphe locataire : ' + (parL ? '<img src="' + parL + '" alt="">' : '<span class="vide"></span>') + '</div>' +
-    '<div class="ref">' + esc(S.adresse || "") + ' — ' + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
-  return h;
+    '<div class="ref">' + (S.adresse ? esc(S.adresse) + ' — ' : '') + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
+
+  /* Le pied de page est place dans un <tfoot> : c'est le seul moyen fiable, a
+     l'impression, d'obtenir une bande repetee en bas de CHAQUE page qui reserve
+     vraiment sa place. Avec un element en position:fixed, le navigateur le
+     dessinait par-dessus le tableau : les dernieres lignes de chaque page
+     etaient bien dans le document mais recouvertes, donc perdues au papier. */
+  return '<table class="mise"><tfoot><tr><td>' + pied + '</td></tr></tfoot>' +
+         '<tbody><tr><td>' + h + '</td></tr></tbody></table>';
 }
 function nomDoc(){
   var v = (S.ville || S.adresse || "logement").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 28);
   return "EDL-" + (S.type === "sortie" ? "sortie" : "entree") + "-" + v + "-" + S.date;
 }
+/* Vrai pendant une impression lancee par « Terminer » : le document est alors
+   deja rendu avec son empreinte, il ne faut pas le regenerer sans elle. */
+var enImpression = false;
 function imprimer(){
   empreinte(function(emp){
+    enImpression = true;
     el("#impression").innerHTML = docHTML(emp);
     var titre = document.title;
     document.title = nomDoc();
     setTimeout(function(){
       window.print();
-      setTimeout(function(){ document.title = titre; }, 1500);
+      setTimeout(function(){ document.title = titre; enImpression = false; }, 1500);
     }, 120);
   });
 }
@@ -1886,7 +1950,7 @@ els("#menu button").forEach(function(b){
     var a = b.getAttribute("data-act");
     el("#menu").classList.remove("ouvert");
     if(a === "sauver") sauver();
-    else if(a === "ouvrir"){ attenteSortie = false; el("#fichier-json").click(); }
+    else if(a === "ouvrir"){ ouvreFichier(false); }
     else if(a === "sortie") versSortie();
     else if(a === "imprimer") terminer();
     else if(a === "apercu") apercu();
@@ -1908,7 +1972,10 @@ window.addEventListener("beforeunload", function(ev){
   ev.preventDefault();
   ev.returnValue = "";
 });
-window.addEventListener("beforeprint", function(){ if(!el("#impression").innerHTML) el("#impression").innerHTML = docHTML(""); });
+/* Toujours regenerer : le garde precedent (« seulement si le bloc est vide »)
+   faisait imprimer un instantane perime des qu'une impression avait deja eu
+   lieu — un Ctrl+P en debut de visite figeait un document quasi vide. */
+window.addEventListener("beforeprint", function(){ if(!enImpression) el("#impression").innerHTML = docHTML(""); });
 
 function repare(o){
   if(!o || typeof o !== "object" || !o.pieces) return null;
@@ -1917,13 +1984,27 @@ function repare(o){
   if(!o.paraphes) o.paraphes = {bailleur:"", locataire:""};
   if(!o.horodatage) o.horodatage = {bailleur:"", locataire:""};
   if(!o.bailleur) o.bailleur = {nom:"", contact:"", adresse:""};
-  if(!Array.isArray(o.locataires) || !o.locataires.length) o.locataires = [{nom:"", contact:"", adresse:""}];
-  if(!Array.isArray(o.compteurs)) o.compteurs = [];
-  if(!Array.isArray(o.cles)) o.cles = [];
+  /* On ecarte les entrees vides ou non exploitables : un tableau du genre
+     [null] passait les controles et faisait planter l'etape « Les parties »
+     ainsi que l'edition du document. */
+  function objets(v){ return (Array.isArray(v) ? v : []).filter(function(x){ return x && typeof x === "object"; }); }
+  o.locataires = objets(o.locataires);
+  if(!o.locataires.length) o.locataires = [{nom:"", contact:"", adresse:""}];
+  o.compteurs = objets(o.compteurs);
+  o.cles = objets(o.cles);
+  o.pieces = objets(o.pieces);
+  if(!o.date) o.date = new Date().toISOString().slice(0,10);
+  if(!o.faitLe) o.faitLe = o.date;
   o.pieces.forEach(function(p){
+    if(typeof p.type !== "string" || !p.type) p.type = "Pièce libre";
+    if(typeof p.nom !== "string" || !p.nom) p.nom = p.type;
     if(!Array.isArray(p.elements)) p.elements = [];
     if(!Array.isArray(p.photos)) p.photos = [];
-    p.elements.forEach(function(e){ if(!Array.isArray(e.photos)) e.photos = []; });
+    p.elements = objets(p.elements);
+    p.elements.forEach(function(e){
+      if(typeof e.nom !== "string" || !e.nom) e.nom = "Élément";
+      if(!Array.isArray(e.photos)) e.photos = [];
+    });
   });
   return o;
 }
@@ -1968,8 +2049,15 @@ if("serviceWorker" in navigator){
       try{ reg.update(); }catch(e){}
       setInterval(function(){ try{ reg.update(); }catch(e){} }, 60 * 60 * 1000);
     }).catch(function(){});
+    /* Au tout premier lancement, la page n'est pas encore controlee : la prise
+       de controle initiale declenche aussi « controllerchange », ce qui
+       rechargeait l'application quelques instants apres son ouverture. On ne
+       recharge que pour une VRAIE mise a jour, c'est-a-dire un changement de
+       service worker alors qu'un autre etait deja aux commandes. */
+    var premiereInstallation = !navigator.serviceWorker.controller;
     var recharge = false;
     navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if(premiereInstallation){ premiereInstallation = false; return; }
       if(recharge) return;
       recharge = true;
       enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
