@@ -845,15 +845,18 @@ function etapes(){
 
 function manques(e){
   var m = [];
+  /* Un champ rempli d'espaces n'est pas rempli : sans ce controle, un constat
+     pouvait etre edite avec une adresse ou un nom de partie vide. */
+  function vide(v){ return !v || !String(v).trim(); }
   if(e.id === "type" && !S.type) m.push({msg:"Choisis d'abord entrée ou sortie.", ou:".choix"});
   if(e.id === "type" && S.type === "sortie" && !S.origineSortie) m.push({msg:"Indique comment établir cette sortie : de zéro, ou depuis le fichier d'entrée.", ou:".choix"});
   if(e.id === "logement"){
     if(!S.typeLogement) m.push({msg:"Choisis le type de logement.", ou:".choix"});
-    if(!S.adresse) m.push({msg:"L'adresse du logement est obligatoire.", ou:"[data-path=adresse]"});
+    if(vide(S.adresse)) m.push({msg:"L'adresse du logement est obligatoire.", ou:"[data-path=adresse]"});
   }
   if(e.id === "parties"){
-    if(!S.bailleur.nom) m.push({msg:"Le nom du bailleur est obligatoire.", ou:"[data-path='bailleur.nom']"});
-    if(!S.locataires[0] || !S.locataires[0].nom) m.push({msg:"Le nom du locataire est obligatoire.", ou:"[data-req=loc0]"});
+    if(vide(S.bailleur.nom)) m.push({msg:"Le nom du bailleur est obligatoire.", ou:"[data-path='bailleur.nom']"});
+    if(!S.locataires[0] || vide(S.locataires[0].nom)) m.push({msg:"Le nom du locataire est obligatoire.", ou:"[data-req=loc0]"});
   }
   if(e.id === "composition" && !S.pieces.length) m.push({msg:"Ajoute au moins une pièce pour continuer.", ou:".ligne-piece"});
   return m;
@@ -1120,8 +1123,9 @@ function vCompteurs(b){
   a.innerHTML = "🔢  Ajouter un compteur";
   a.addEventListener("click", function(){
     var n = prompt("Nom du compteur :", "Fioul");
+    n = n && n.trim();
     if(!n) return;
-    S.compteurs.push({libelle:n, numero:"", index:"", unite:(prompt("Unité :", "L") || ""), index2:"", libelle2:""});
+    S.compteurs.push({libelle:n, numero:"", index:"", unite:((prompt("Unité :", "L") || "").trim()), index2:"", libelle2:""});
     dessine();
   });
   b.appendChild(a);
@@ -1189,11 +1193,28 @@ function vComposition(b){
     bs[1].addEventListener("click", function(){ ajoutePiece(t); dessine(); });
     b.appendChild(d);
   });
+
+  /* Une piece dont le type ne figure pas dans la liste ci-dessus n'avait
+     aucune ligne : ni la piece personnalisee, ni l'inventaire conserve apres
+     un retour en logement nu ne pouvaient plus etre retires. On leur donne
+     leur propre ligne, nommee comme la piece. */
+  S.pieces.forEach(function(p, i){
+    if(liste.indexOf(p.type) !== -1) return;
+    var d = document.createElement("div");
+    d.className = "ligne-piece active";
+    d.innerHTML = past(EMO_PIECE[p.type] || "📐", true) + "<b></b>" +
+      '<div class="pas-a-pas"><button aria-label="Retirer">−</button></div>';
+    el("b", d).textContent = p.nom;
+    el("button", d).addEventListener("click", function(){ S.pieces.splice(i, 1); dessine(); });
+    b.appendChild(d);
+  });
+
   var a = document.createElement("button");
   a.className = "ajout";
   a.innerHTML = "📐  Pièce personnalisée";
   a.addEventListener("click", function(){
     var n = prompt("Nom de la pièce :", "Mezzanine");
+    n = n && n.trim();
     if(!n) return;
     S.pieces.push({id:uid(), type:"Pièce libre", nom:n, nomPerso:true, observations:"", photos:[],
       elements:BASE.map(function(x){ return {nom:x, etat:"", commentaire:"", photos:[]}; })});
@@ -1336,6 +1357,7 @@ function vPiece(b, e){
   a.innerHTML = "➕  Ajouter un élément";
   a.addEventListener("click", function(){
     var n = prompt("Nom de l'élément :");
+    n = n && n.trim();
     if(n){ p.elements.push({nom:n, etat:"", commentaire:"", photos:[]}); dessine(); }
   });
   b.appendChild(a);
