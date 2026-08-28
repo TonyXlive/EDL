@@ -168,7 +168,11 @@ input:focus,select:focus,textarea:focus{background:#fff}
 .grand.secondaire:hover{background:#F2F6FB}
 
 /* ===== navigation basse ===== */
-.nav{position:fixed;left:0;right:0;bottom:0;background:rgba(233,237,242,.94);backdrop-filter:blur(6px);border-top:1px solid var(--trait);z-index:25}
+/* --fond : hauteur de ce que le navigateur ou le systeme pose en bas de
+   l'ecran (clavier, barre de saisie automatique, barre de navigation). Il est
+   mesure en JS ; sans lui, la barre Retour / Suivant se retrouve dessous et
+   devient impossible a atteindre. */
+.nav{position:fixed;left:0;right:0;bottom:var(--fond,0px);background:rgba(233,237,242,.94);backdrop-filter:blur(6px);border-top:1px solid var(--trait);z-index:25}
 .nav-in{max-width:600px;margin:0 auto;padding:11px 16px calc(11px + env(safe-area-inset-bottom));display:flex;gap:10px}
 .nav button{flex:1;border-radius:var(--r);padding:13px;font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14.5px}
 .retour{background:#fff;border:1.5px solid var(--trait);color:var(--encre)}
@@ -410,7 +414,7 @@ input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{
 }
 
 /* ================= validation, toast, finitions UX ================= */
-.toast{position:fixed;left:50%;transform:translate(-50%,14px);bottom:96px;z-index:40;
+.toast{position:fixed;left:50%;transform:translate(-50%,14px);bottom:calc(96px + var(--fond,0px));z-index:40;
   max-width:min(520px,calc(100vw - 32px));background:#111D33;color:#fff;
   border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.35;
   box-shadow:0 18px 40px -16px rgba(17,29,51,.75);opacity:0;pointer-events:none;
@@ -928,6 +932,8 @@ function dessine(){
   ({type:vType, logement:vLogement, parties:vParties, compteurs:vCompteurs,
     cles:vCles, composition:vComposition, piece:vPiece, final:vFinal, recap:vRecap})[e.id](b, e);
   planifie();
+  /* La hauteur de la barre du bas change avec la ligne « Ensuite : … ». */
+  ajusteBas();
 }
 
 function lie(inp, chemin){
@@ -1958,6 +1964,48 @@ function terminer(){
     : "Fichier .json enregistré. La fenêtre d'impression s'ouvre : choisis « Enregistrer au format PDF ».");
   setTimeout(imprimer, 1100);
 }
+
+/* ================= barre du bas toujours atteignable =================
+   Sur telephone et tablette, le navigateur ou le systeme posent souvent
+   quelque chose en bas de l'ecran : clavier, barre de saisie automatique,
+   barre de navigation. Avec un simple bottom:0, la barre Retour / Suivant se
+   dessinait dessous et devenait impossible a atteindre. On mesure donc la
+   zone reellement visible et on remonte la barre d'autant. On en profite pour
+   reserver sous le contenu la hauteur reelle de la barre, plutot qu'une
+   valeur fixe qui ne correspond pas a toutes les tailles d'ecran. */
+var attenteBas = null;
+function ajusteBas(){
+  if(attenteBas) return;
+  attenteBas = requestAnimationFrame(function(){
+    attenteBas = null;
+    var vv = window.visualViewport;
+    var cache = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    document.documentElement.style.setProperty("--fond", cache + "px");
+    var nav = el(".nav"), m = el("main");
+    if(nav && m){
+      var h = Math.ceil(nav.getBoundingClientRect().height);
+      if(h) m.style.paddingBottom = (h + 26) + "px";
+    }
+  });
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", ajusteBas);
+  window.visualViewport.addEventListener("scroll", ajusteBas);
+}
+window.addEventListener("resize", ajusteBas);
+window.addEventListener("orientationchange", ajusteBas);
+/* Quand un champ prend le focus, le clavier s'ouvre : on replace la barre et
+   on amene le champ dans la zone visible. */
+document.addEventListener("focusin", function(ev){
+  ajusteBas();
+  var c = ev.target;
+  if(c && /^(INPUT|TEXTAREA|SELECT)$/.test(c.tagName)){
+    setTimeout(function(){
+      try{ c.scrollIntoView({block:"center", behavior:"smooth"}); }catch(e){}
+    }, 350);
+  }
+});
+document.addEventListener("focusout", function(){ setTimeout(ajusteBas, 100); });
 
 /* ================= navigation et menu ================= */
 el("#apercu-fermer").addEventListener("click", fermeApercu);
