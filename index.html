@@ -519,6 +519,7 @@ body.fige{overflow:hidden}
   </div>
   <div class="jauge-pas"><div id="jauge" style="width:0"></div></div>
   <div class="menu" id="menu">
+    <button data-act="suivant"><span>➡️</span>Étape suivante</button>
     <button data-act="sauver"><span>💾</span>Enregistrer le fichier</button>
     <button data-act="ouvrir"><span>📂</span>Ouvrir un état des lieux</button>
     <button data-act="sortie"><span>📦</span>Créer la sortie à partir de l'entrée</button>
@@ -931,6 +932,18 @@ function dessine(){
   padsSig = [];
   ({type:vType, logement:vLogement, parties:vParties, compteurs:vCompteurs,
     cles:vCles, composition:vComposition, piece:vPiece, final:vFinal, recap:vRecap})[e.id](b, e);
+
+  /* Aucun champ ne doit declencher les suggestions du navigateur. Sur
+     tablette, cette barre de suggestions se pose en bas de l'ecran, par-dessus
+     les boutons Retour et Suivant, et n'en repart plus : la visite se
+     retrouvait bloquee des qu'on avait saisi un texte. Les valeurs saisies ici
+     sont propres au logement visite, elles n'ont rien a gagner d'un carnet
+     d'adresses. */
+  els("input,textarea", b).forEach(function(c){
+    c.setAttribute("autocomplete", "off");
+    c.setAttribute("autocorrect", "off");
+  });
+
   planifie();
   /* La hauteur de la barre du bas change avec la ligne « Ensuite : … ». */
   ajusteBas();
@@ -2019,7 +2032,11 @@ els("#menu button").forEach(function(b){
   b.addEventListener("click", function(){
     var a = b.getAttribute("data-act");
     el("#menu").classList.remove("ouvert");
-    if(a === "sauver") sauver();
+    /* Toujours accessible depuis le haut de l'ecran : si la barre du bas se
+       retrouve masquee par une surcouche du navigateur, la visite peut
+       continuer malgre tout. */
+    if(a === "suivant") suivant();
+    else if(a === "sauver") sauver();
     else if(a === "ouvrir"){ ouvreFichier(false); }
     else if(a === "sortie") versSortie();
     else if(a === "imprimer") terminer();
