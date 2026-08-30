@@ -1975,7 +1975,9 @@ function propre(s, max){
 }
 function nomDoc(){
   var locataire = propre(S.locataires[0] && S.locataires[0].nom, 40);
-  var lieu = propre(S.adresse || S.ville, 48);
+  /* La ville plutot que l'adresse : un nom de fichier plus court et plus
+     lisible. On retombe sur l'adresse si la ville n'est pas renseignee. */
+  var lieu = propre(S.ville || S.adresse, 48);
   return ["EDL", (S.type === "sortie" ? "sortie" : "entree"), locataire, lieu]
     .filter(function(x){ return x; }).join("-");
 }
