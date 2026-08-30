@@ -1181,9 +1181,25 @@ function renomme(type){
   var l = S.pieces.filter(function(p){ return p.type === type; });
   l.forEach(function(p, i){ if(!p.nomPerso) p.nom = l.length > 1 ? type.split(" / ")[0] + " " + (i+1) : type; });
 }
+/* Les pieces suivent l'ordre de la liste de composition, et pour un meme type
+   l'ordre d'ajout. Sans ce classement, une piece ajoutee apres coup restait a
+   la fin : on obtenait « Entrée 1 à 4, Séjour 1 à 4, Cuisine 1 à 7, Entrée 5
+   à 8… » au lieu d'une numerotation suivie. */
+function rangPiece(type){
+  var i = ORDRE.indexOf(type);
+  if(i !== -1) return i;
+  if(type === "Inventaire du mobilier") return ORDRE.length;
+  return ORDRE.length + 1;                       /* pieces personnalisees en dernier */
+}
+function ordonnePieces(){
+  S.pieces = S.pieces.map(function(p, i){ return {p:p, i:i}; })
+    .sort(function(a, b){ return (rangPiece(a.p.type) - rangPiece(b.p.type)) || (a.i - b.i); })
+    .map(function(x){ return x.p; });
+}
 function ajoutePiece(type){
   S.pieces.push({id:uid(), type:type, nom:type, nomPerso:false, observations:"", photos:[],
     elements:(PRESETS[type] || BASE).map(function(n){ return {nom:n, etat:"", commentaire:"", photos:[]}; })});
+  ordonnePieces();
   renomme(type);
 }
 function retirePiece(type){
@@ -1237,6 +1253,7 @@ function vComposition(b){
     if(!n) return;
     S.pieces.push({id:uid(), type:"Pièce libre", nom:n, nomPerso:true, observations:"", photos:[],
       elements:BASE.map(function(x){ return {nom:x, etat:"", commentaire:"", photos:[]}; })});
+    ordonnePieces();
     dessine();
   });
   b.appendChild(a);
@@ -2093,6 +2110,10 @@ function repare(o){
       if(!Array.isArray(e.photos)) e.photos = [];
     });
   });
+  /* Remet aussi en ordre les etats des lieux enregistres avant ce classement. */
+  o.pieces = o.pieces.map(function(p, i){ return {p:p, i:i}; })
+    .sort(function(a, b){ return (rangPiece(a.p.type) - rangPiece(b.p.type)) || (a.i - b.i); })
+    .map(function(x){ return x.p; });
   return o;
 }
 
