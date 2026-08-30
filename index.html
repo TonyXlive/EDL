@@ -2051,11 +2051,18 @@ window.addEventListener("orientationchange", ajusteBas);
 document.addEventListener("focusin", function(ev){
   ajusteBas();
   var c = ev.target;
-  if(c && /^(INPUT|TEXTAREA|SELECT)$/.test(c.tagName)){
-    setTimeout(function(){
-      try{ c.scrollIntoView({block:"center", behavior:"smooth"}); }catch(e){}
-    }, 350);
-  }
+  if(!c || !/^(INPUT|TEXTAREA|SELECT)$/.test(c.tagName)) return;
+  /* On ne deplace la vue que si le champ est reellement hors de la zone
+     utilisable : le recentrer a chaque fois qu'on le touche serait penible. */
+  setTimeout(function(){
+    try{
+      var r = c.getBoundingClientRect();
+      var fond = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fond")) || 0;
+      var nav = el(".nav");
+      var bas = window.innerHeight - fond - (nav ? nav.getBoundingClientRect().height : 0);
+      if(r.bottom > bas || r.top < 0) c.scrollIntoView({block:"center", behavior:"smooth"});
+    }catch(e){}
+  }, 350);
 });
 document.addEventListener("focusout", function(){ setTimeout(ajusteBas, 100); });
 
