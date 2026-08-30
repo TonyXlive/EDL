@@ -811,9 +811,13 @@ function badge(ok){
 }
 function enregistreBrouillon(cb){
   if(minuteur){ clearTimeout(minuteur); minuteur = null; }
-  var paquet;
-  try{ paquet = {v:1, pas:pas, quand:Date.now(), s:JSON.parse(JSON.stringify(S))}; }
-  catch(e){ if(cb) cb(false); return; }
+  /* Pas de copie profonde de l'etat : elle recopiait toutes les photos en
+     memoire a chaque frappe de touche (8 Mo mesures pour 40 photos), ce qui
+     mettait la tablette sous pression et pouvait la conduire a fermer
+     l'application. Les deux enregistrements font deja leur propre copie :
+     la base de l'appareil au moment de l'ecriture, le stockage simple en
+     convertissant en texte. */
+  var paquet = {v:1, pas:pas, quand:Date.now(), s:S};
   ecritBrouillon(paquet, function(ok){
     badge(!!ok);
     if(!ok && Date.now() - (enregistreBrouillon.avert || 0) > 60000){
@@ -1429,7 +1433,11 @@ function dessinePhotos(box, cible){
   (cible.photos || []).forEach(function(o, k){
     var c = document.createElement("div");
     c.className = "photo";
-    c.innerHTML = '<img alt=""><button title="Supprimer">✕</button><span class="ts"></span>';
+    /* decoding="async" : le decodage des photos se fait hors du fil principal,
+       l'affichage de la piece ne se fige pas quand elle en compte plusieurs.
+       (Un report facon loading="lazy" serait sans effet : les photos sont
+       integrees au document, il n'y a aucun telechargement a retarder.) */
+    c.innerHTML = '<img alt="" decoding="async"><button title="Supprimer">✕</button><span class="ts"></span>';
     el("img", c).src = srcPhoto(o);
     el(".ts", c).textContent = tsPhoto(o);
     el("button", c).addEventListener("click", function(){ cible.photos.splice(k,1); dessinePhotos(box, cible); touche(); });
@@ -1955,9 +1963,21 @@ function docHTML(emp){
   return '<table class="mise"><tfoot><tr><td>' + pied + '</td></tr></tfoot>' +
          '<tbody><tr><td>' + h + '</td></tr></tbody></table>';
 }
+/* Nom du fichier : EDL-entree/sortie-Nom du locataire-Lieu de la location.
+   Les accents sont ramenes a leur lettre simple plutot que remplaces par des
+   tirets, sinon « Nîmes » devenait « N-mes ». */
+function propre(s, max){
+  return String(s == null ? "" : s)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, max);
+}
 function nomDoc(){
-  var v = (S.ville || S.adresse || "logement").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 28);
-  return "EDL-" + (S.type === "sortie" ? "sortie" : "entree") + "-" + v + "-" + S.date;
+  var locataire = propre(S.locataires[0] && S.locataires[0].nom, 40);
+  var lieu = propre(S.adresse || S.ville, 48);
+  return ["EDL", (S.type === "sortie" ? "sortie" : "entree"), locataire, lieu]
+    .filter(function(x){ return x; }).join("-");
 }
 /* Vrai pendant une impression lancee par « Terminer » : le document est alors
    deja rendu avec son empreinte, il ne faut pas le regenerer sans elle. */
@@ -2151,6 +2171,17 @@ document.addEventListener("visibilitychange", function(){
 window.addEventListener("pagehide", function(){ enregistreBrouillon(); });
 window.addEventListener("blur", function(){ enregistreBrouillon(); });
 
+/* Une mise a jour ne doit JAMAIS interrompre une visite en cours : le
+   rechargement donnait l'impression que l'application se fermait toute seule
+   au milieu d'un constat. Tant qu'un etat des lieux est commence, on se
+   contente d'enregistrer ; la nouvelle version s'appliquera a la prochaine
+   ouverture, la page etant de toute facon relue sur le reseau quand il est
+   disponible. Renvoie vrai si le rechargement a ete engage. */
+function appliqueMaj(){
+  if(S.adresse || S.pieces.length){ enregistreBrouillon(); return false; }
+  enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
+  return true;
+}
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
     navigator.serviceWorker.register("sw.js").then(function(reg){
@@ -2167,8 +2198,7 @@ if("serviceWorker" in navigator){
     navigator.serviceWorker.addEventListener("controllerchange", function(){
       if(premiereInstallation){ premiereInstallation = false; return; }
       if(recharge) return;
-      recharge = true;
-      enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
+      recharge = appliqueMaj();
     });
   });
 }
