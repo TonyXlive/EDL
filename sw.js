@@ -50,7 +50,7 @@ self.addEventListener("fetch", function(e){
            l'application par la page d'erreur, y compris hors ligne. */
         if(net && net.ok){
           var copie = net.clone();
-          caches.open(CACHE).then(function(c){ c.put("./index.html", copie).catch(function(){}); });
+          caches.open(CACHE).then(function(c){ c.put("./index.html", copie).catch(function(){}); }).catch(function(){});
           return net;
         }
         /* Reponse d'erreur : on ressert la derniere version saine si on l'a. */
@@ -68,7 +68,7 @@ self.addEventListener("fetch", function(e){
       return fetch(req).then(function(net){
         if(net && net.status === 200 && net.type === "basic"){
           var copie = net.clone();
-          caches.open(CACHE).then(function(c){ c.put(req, copie).catch(function(){}); });
+          caches.open(CACHE).then(function(c){ c.put(req, copie).catch(function(){}); }).catch(function(){});
         }
         return net;
       });

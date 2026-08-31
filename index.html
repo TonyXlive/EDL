@@ -693,6 +693,9 @@ function horodate(d){
 }
 function horoISO(iso){ if(!iso) return ""; try{ return horodate(new Date(iso)); }catch(e){ return ""; } }
 function srcPhoto(o){ return (o && o.src) ? o.src : o; }
+/* Version legere pour l'ecran, avec repli sur la photo pleine taille pour les
+   constats enregistres avant l'apparition des vignettes. */
+function vignettePhoto(o){ return (o && o.v) ? o.v : srcPhoto(o); }
 /* Les images du document proviennent parfois d'un fichier .json fourni par
    l'autre partie (reprise de l'etat des lieux d'entree). On n'accepte donc
    qu'une image reellement embarquee dans le fichier, et on echappe la valeur :
@@ -815,7 +818,10 @@ function badge(ok){
   m.setAttribute("title", ok ? "Brouillon enregistr\u00e9 sur l'appareil" : "Enregistrement impossible \u2014 m\u00e9moire pleine");
   m.classList.add("vu");
   clearTimeout(badge.h);
-  badge.h = setTimeout(function(){ m.classList.remove("vu"); }, 1600);
+  /* En cas d'echec, le temoin reste affiche : il disparaissait au bout de
+     1,6 s et l'operateur pouvait mener toute une visite en croyant son travail
+     enregistre. Il ne redevient furtif qu'au retour d'un enregistrement reussi. */
+  if(ok) badge.h = setTimeout(function(){ m.classList.remove("vu"); }, 1600);
 }
 /* On note aussi quelle PIECE etait ouverte : si son rang change entre-temps
    (reclassement d'un ancien enregistrement), on la retrouve par son
@@ -1468,7 +1474,7 @@ function dessinePhotos(box, cible){
        (Un report facon loading="lazy" serait sans effet : les photos sont
        integrees au document, il n'y a aucun telechargement a retarder.) */
     c.innerHTML = '<img alt="" decoding="async"><button title="Supprimer">✕</button><span class="ts"></span>';
-    el("img", c).src = srcPhoto(o);
+    el("img", c).src = vignettePhoto(o);
     el(".ts", c).textContent = tsPhoto(o);
     el("button", c).addEventListener("click", function(){ cible.photos.splice(k,1); dessinePhotos(box, cible); touche(); });
     box.appendChild(c);
@@ -1538,6 +1544,21 @@ function traitePhoto(f, legende, cb){
         c.textAlign = "left";
       }
       o = {src:cv.toDataURL("image/jpeg", 0.7), t:d.toISOString(), l:legende || ""};
+      /* Vignette destinee au seul affichage a l'ecran. Montrer la photo pleine
+         taille dans une case de 78 px oblige le navigateur a garder en memoire
+         une image decodee enorme ; comme chaque changement d'etape repeint ces
+         vignettes, la memoire du navigateur grimpait sans redescendre jusqu'a
+         faire fermer l'application par le systeme. Le document imprime et le
+         fichier .json continuent d'utiliser la photo pleine taille. */
+      try{
+        var mv = 320, rv = Math.min(1, mv / Math.max(cv.width, cv.height));
+        var vg = document.createElement("canvas");
+        vg.width = Math.max(1, Math.round(cv.width * rv));
+        vg.height = Math.max(1, Math.round(cv.height * rv));
+        vg.getContext("2d").drawImage(cv, 0, 0, vg.width, vg.height);
+        o.v = vg.toDataURL("image/jpeg", 0.6);
+        vg.width = 1; vg.height = 1;
+      }catch(e){}
       cv.width = 1; cv.height = 1;
     }catch(e){ o = null; }
     termine(o);
@@ -2060,7 +2081,11 @@ function imprimer(){
     document.title = nomDoc();
     setTimeout(function(){
       window.print();
-      setTimeout(function(){ document.title = titreOrigine; enImpression = false; }, 1500);
+      setTimeout(function(){
+        document.title = titreOrigine;
+        enImpression = false;
+        el("#impression").innerHTML = "";   /* libere le document et ses photos */
+      }, 1500);
     }, 120);
   });
 }
@@ -2075,6 +2100,10 @@ function apercu(){
 function fermeApercu(){
   el("#apercu").classList.remove("vu");
   document.body.classList.remove("fige");
+  /* Le masquer ne suffit pas : le document et toutes ses photos restaient
+     attaches a la page, soit une vingtaine de mega-octets retenus pour rien
+     jusqu'a la fermeture de l'application. */
+  el("#apercu-doc").innerHTML = "";
 }
 function terminer(){
   /* Deux appuis rapproches enregistraient le fichier deux fois. */
@@ -2184,6 +2213,9 @@ window.addEventListener("beforeunload", function(ev){
    faisait imprimer un instantane perime des qu'une impression avait deja eu
    lieu — un Ctrl+P en debut de visite figeait un document quasi vide. */
 window.addEventListener("beforeprint", function(){ if(!enImpression) el("#impression").innerHTML = docHTML(""); });
+/* Une fois l'impression terminee, le document et ses photos n'ont plus lieu
+   d'occuper la memoire : ils y restaient jusqu'a la fermeture. */
+window.addEventListener("afterprint", function(){ if(!enImpression) el("#impression").innerHTML = ""; });
 
 function repare(o){
   if(!o || typeof o !== "object" || !o.pieces) return null;
@@ -2282,11 +2314,16 @@ function appliqueMaj(){
   enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
   return true;
 }
+function majSw(reg){
+  try{ var p = reg.update(); if(p && p.catch) p.catch(function(){}); }catch(e){}
+}
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
     navigator.serviceWorker.register("sw.js").then(function(reg){
-      try{ reg.update(); }catch(e){}
-      setInterval(function(){ try{ reg.update(); }catch(e){} }, 60 * 60 * 1000);
+      /* Hors reseau, reg.update() rejette une promesse : sans .catch elle
+         remontait en erreur non geree a chaque lancement et chaque heure. */
+      majSw(reg);
+      setInterval(function(){ majSw(reg); }, 60 * 60 * 1000);
     }).catch(function(){});
     /* Au tout premier lancement, la page n'est pas encore controlee : la prise
        de controle initiale declenche aussi « controllerchange », ce qui
