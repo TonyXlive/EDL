@@ -1,12 +1,13 @@
-/* Service worker v11 : application utilisable sans reseau,
+/* Service worker v12.2 : application utilisable sans reseau,
    mais qui recupere toujours la derniere version quand le reseau est la. */
-var CACHE = "edl-v11";
+var CACHE = "edl-v12-2";
 var FICHIERS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icone-192.png",
   "./icone-512.png",
+  "./icone-maskable-512.png",
   "./apple-touch-icon.png"
 ];
 
@@ -44,9 +45,16 @@ self.addEventListener("fetch", function(e){
   if(estPage(req)){
     e.respondWith(
       fetch(req, {cache:"no-store"}).then(function(net){
-        var copie = net.clone();
-        caches.open(CACHE).then(function(c){ c.put("./index.html", copie).catch(function(){}); });
-        return net;
+        /* On ne met en cache qu'une page reellement valide : sinon une panne
+           passagere du serveur (404, 503, page d'erreur) remplacerait
+           l'application par la page d'erreur, y compris hors ligne. */
+        if(net && net.ok){
+          var copie = net.clone();
+          caches.open(CACHE).then(function(c){ c.put("./index.html", copie).catch(function(){}); }).catch(function(){});
+          return net;
+        }
+        /* Reponse d'erreur : on ressert la derniere version saine si on l'a. */
+        return caches.match("./index.html").then(function(r){ return r || net; });
       }).catch(function(){
         return caches.match("./index.html").then(function(r){ return r || caches.match("./"); });
       })
@@ -60,7 +68,7 @@ self.addEventListener("fetch", function(e){
       return fetch(req).then(function(net){
         if(net && net.status === 200 && net.type === "basic"){
           var copie = net.clone();
-          caches.open(CACHE).then(function(c){ c.put(req, copie).catch(function(){}); });
+          caches.open(CACHE).then(function(c){ c.put(req, copie).catch(function(){}); }).catch(function(){});
         }
         return net;
       });

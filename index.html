@@ -14,7 +14,10 @@
 <title>État des lieux — entrée &amp; sortie</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<!-- Polices chargees sans bloquer l'affichage : sur un reseau lent ou un portail
+     captif, l'application doit s'ouvrir immediatement avec les polices systeme
+     plutot que d'attendre une reponse qui peut ne jamais venir. -->
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <style>
 :root{
   --papier:#E9EDF2; --carte:#FFFFFF; --encre:#15233B; --encre2:#53637C;
@@ -35,7 +38,7 @@ input,select,textarea{font:inherit;color:inherit}
 .barre-in{max-width:600px;margin:0 auto;padding:11px 16px;display:flex;align-items:center;gap:10px}
 .barre h1{font-size:15px;text-transform:uppercase;letter-spacing:.09em;font-weight:600}
 .barre .marque{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#8EA3C0;margin-left:auto}
-.barre h1{white-space:nowrap}
+.barre h1{white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .barre .marque{white-space:nowrap;margin-left:auto}
 .barre .sauve{flex:none;width:18px;height:18px;border-radius:50%;background:#1E7A54;color:#DFF5E8;
   font-size:11px;line-height:18px;text-align:center;opacity:0;transform:scale(.6);
@@ -165,7 +168,11 @@ input:focus,select:focus,textarea:focus{background:#fff}
 .grand.secondaire:hover{background:#F2F6FB}
 
 /* ===== navigation basse ===== */
-.nav{position:fixed;left:0;right:0;bottom:0;background:rgba(233,237,242,.94);backdrop-filter:blur(6px);border-top:1px solid var(--trait);z-index:25}
+/* --fond : hauteur de ce que le navigateur ou le systeme pose en bas de
+   l'ecran (clavier, barre de saisie automatique, barre de navigation). Il est
+   mesure en JS ; sans lui, la barre Retour / Suivant se retrouve dessous et
+   devient impossible a atteindre. */
+.nav{position:fixed;left:0;right:0;bottom:var(--fond,0px);background:rgba(233,237,242,.94);backdrop-filter:blur(6px);border-top:1px solid var(--trait);z-index:25}
 .nav-in{max-width:600px;margin:0 auto;padding:11px 16px calc(11px + env(safe-area-inset-bottom));display:flex;gap:10px}
 .nav button{flex:1;border-radius:var(--r);padding:13px;font-family:"Archivo Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.06em;font-size:14.5px}
 .retour{background:#fff;border:1.5px solid var(--trait);color:var(--encre)}
@@ -220,20 +227,36 @@ input:focus,select:focus,textarea:focus{background:#fff}
 #impression{display:none}
 .doc{font-size:11px;color:#000}
 @media print{
-  body{background:#fff}
-  .barre,main,.nav,.menu{display:none !important}
+  body{background:#fff !important}
+  .barre,main,.nav,.menu,.toast{display:none !important}
   #impression{display:block}
-  @page{size:A4;margin:13mm 12mm 20mm}
+  @page{size:A4;margin:13mm 12mm 13mm}
+  .doc thead{display:table-header-group}
+  .doc tr{page-break-inside:avoid;break-inside:avoid}
+  .doc .piece-doc{page-break-inside:auto;break-inside:auto}
+  .doc .piece-doc h3{page-break-after:avoid;break-after:avoid}
+  .doc h2{page-break-after:avoid;break-after:avoid}
+  .doc .ph figure{page-break-inside:avoid;break-inside:avoid}
+  /* Ossature qui repete le pied de page en bas de chaque page imprimee. Ses
+     propres lignes doivent pouvoir se couper, sinon tout le document serait
+     traite comme un bloc insecable. */
+  .doc .mise>tfoot{display:table-footer-group}
+  .doc .mise>tbody>tr,.doc .mise>tfoot>tr{page-break-inside:auto;break-inside:auto}
 }
+.doc{padding-bottom:0}
 .doc h1{font-size:19px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
 .doc h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;margin:14px 0 5px;padding-bottom:2px;border-bottom:1.5px solid #000}
 .doc .doc-tete{border-bottom:2px solid #000;padding-bottom:6px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-end}
 .doc table{width:100%;border-collapse:collapse;margin-bottom:4px}
-.doc th,.doc td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top}
+/* overflow-wrap:anywhere : sans cela, un mot tres long (URL, reference sans
+   espace) elargit sa colonne au-dela de la page et le texte des colonnes
+   suivantes est coupe net au bord du papier. */
+.doc th,.doc td{border:.6px solid #6B7480;padding:3px 5px;text-align:left;vertical-align:top;overflow-wrap:anywhere}
 .doc th{background:#E8EDF3;font-family:"Archivo Narrow",sans-serif;text-transform:uppercase;font-size:9.5px;letter-spacing:.05em}
 .doc .kv td:first-child{width:32%;background:#F4F7FA;font-weight:600}
-.doc .piece-doc{page-break-inside:avoid;margin-bottom:9px}
+.doc .piece-doc{margin-bottom:9px}
 .doc tr.baisse td{background:#FBEEEC}
+.doc tr.baisse-legere td{background:#FBF6EC}
 .doc .quand{font-size:8px;color:#444;margin-top:2px}
 .doc .annexe{page-break-before:always}
 .doc .piece-doc h3{font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;background:#000;color:#fff;padding:2px 6px;margin:0 0 3px}
@@ -245,7 +268,12 @@ input:focus,select:focus,textarea:focus{background:#fff}
 .doc .sig-doc div{flex:1;border:.6px solid #6B7480;padding:5px;min-height:110px}
 .doc .sig-doc img{max-width:100%;max-height:78px}
 .doc .mentions{margin-top:10px;font-size:8.5px;color:#333;line-height:1.4;border-top:.6px solid #6B7480;padding-top:4px}
-.doc .pied-page{position:fixed;bottom:-14mm;left:0;right:0;display:flex;align-items:flex-end;gap:10px;
+/* Ossature du document : une seule cellule qui porte tout le corps, plus un
+   <tfoot> repete en bas de chaque page a l'impression. Elle ne doit rien
+   changer a l'apparence, d'ou l'absence de bordure et de marge interieure. */
+.doc .mise{width:100%;border-collapse:collapse}
+.doc .mise>tbody>tr>td,.doc .mise>tfoot>tr>td{border:0;padding:0}
+.doc .pied-page{display:flex;align-items:flex-end;gap:10px;min-height:12mm;
   border-top:.6px solid #6B7480;padding-top:2px;font-size:8px;color:#333}
 .doc .pied-page div{display:flex;align-items:flex-end;gap:4px}
 .doc .pied-page img{height:11mm;max-width:26mm;object-fit:contain}
@@ -386,7 +414,7 @@ input[type=text]:focus,input[type=date]:focus,select:focus,textarea:focus{
 }
 
 /* ================= validation, toast, finitions UX ================= */
-.toast{position:fixed;left:50%;transform:translate(-50%,14px);bottom:96px;z-index:40;
+.toast{position:fixed;left:50%;transform:translate(-50%,14px);bottom:calc(96px + var(--fond,0px));z-index:40;
   max-width:min(520px,calc(100vw - 32px));background:#111D33;color:#fff;
   border-radius:12px;padding:12px 16px;font-size:14px;line-height:1.35;
   box-shadow:0 18px 40px -16px rgba(17,29,51,.75);opacity:0;pointer-events:none;
@@ -491,6 +519,7 @@ body.fige{overflow:hidden}
   </div>
   <div class="jauge-pas"><div id="jauge" style="width:0"></div></div>
   <div class="menu" id="menu">
+    <button data-act="suivant"><span>➡️</span>Étape suivante</button>
     <button data-act="sauver"><span>💾</span>Enregistrer le fichier</button>
     <button data-act="ouvrir"><span>📂</span>Ouvrir un état des lieux</button>
     <button data-act="sortie"><span>📦</span>Créer la sortie à partir de l'entrée</button>
@@ -664,6 +693,18 @@ function horodate(d){
 }
 function horoISO(iso){ if(!iso) return ""; try{ return horodate(new Date(iso)); }catch(e){ return ""; } }
 function srcPhoto(o){ return (o && o.src) ? o.src : o; }
+/* Version legere pour l'ecran, avec repli sur la photo pleine taille pour les
+   constats enregistres avant l'apparition des vignettes. */
+function vignettePhoto(o){ return (o && o.v) ? o.v : srcPhoto(o); }
+/* Les images du document proviennent parfois d'un fichier .json fourni par
+   l'autre partie (reprise de l'etat des lieux d'entree). On n'accepte donc
+   qu'une image reellement embarquee dans le fichier, et on echappe la valeur :
+   sans cela, un fichier fabrique pourrait injecter du HTML dans le constat
+   ou faire sortir des donnees vers un serveur exterieur. */
+function srcImg(v){
+  v = String(v == null ? "" : v);
+  return /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=\s]*$/.test(v) ? esc(v) : "";
+}
 function tsPhoto(o){ return (o && o.t) ? horoISO(o.t) : ""; }
 function empreinte(cb){
   var txt = JSON.stringify(S);
@@ -689,7 +730,9 @@ function ecarts(){
   });
   return r;
 }
-function frDate(iso){ if(!iso) return "……/……/………"; var d=String(iso).split("-"); return d.length<3?iso:d[2]+"/"+d[1]+"/"+d[0]; }
+/* Le resultat est insere dans le document : il doit etre echappe, la date
+   pouvant venir d'un fichier .json ouvert depuis l'exterieur. */
+function frDate(iso){ if(!iso) return "……/……/………"; var d=String(iso).split("-"); return esc(d.length<3?iso:d[2]+"/"+d[1]+"/"+d[0]); }
 function get(p){ var o=S,a=p.split("."),i; for(i=0;i<a.length;i++){ if(o==null) return ""; o=o[a[i]]; } return o==null?"":o; }
 function set(p,v){ var o=S,a=p.split("."),i; for(i=0;i<a.length-1;i++) o=o[a[i]]; o[a[a.length-1]]=v; touche(); }
 
@@ -737,13 +780,21 @@ function litLS(cb){
     cb(t ? JSON.parse(t) : null);
   }catch(e){ cb(null); }
 }
+/* On garde le plus recent des deux enregistrements : celui de la base de
+   l'appareil, complet mais ecrit de facon differee, et celui du stockage
+   simple, ecrit immediatement quand l'application passe en arriere-plan. */
+function plusRecent(a, b){
+  if(!a) return b || null;
+  if(!b) return a;
+  return ((b.quand || 0) > (a.quand || 0)) ? b : a;
+}
 function litBrouillon(cb){
   ouvreDB(function(d){
     if(d){
       try{
         var tx = d.transaction("etat", "readonly");
         var q = tx.objectStore("etat").get("brouillon");
-        q.onsuccess = function(){ if(q.result) return cb(q.result); litLS(cb); };
+        q.onsuccess = function(){ litLS(function(l){ cb(plusRecent(q.result, l)); }); };
         q.onerror = function(){ litLS(cb); };
         return;
       }catch(e){}
@@ -767,14 +818,43 @@ function badge(ok){
   m.setAttribute("title", ok ? "Brouillon enregistr\u00e9 sur l'appareil" : "Enregistrement impossible \u2014 m\u00e9moire pleine");
   m.classList.add("vu");
   clearTimeout(badge.h);
-  badge.h = setTimeout(function(){ m.classList.remove("vu"); }, 1600);
+  /* En cas d'echec, le temoin reste affiche : il disparaissait au bout de
+     1,6 s et l'operateur pouvait mener toute une visite en croyant son travail
+     enregistre. Il ne redevient furtif qu'au retour d'un enregistrement reussi. */
+  if(ok) badge.h = setTimeout(function(){ m.classList.remove("vu"); }, 1600);
+}
+/* On note aussi quelle PIECE etait ouverte : si son rang change entre-temps
+   (reclassement d'un ancien enregistrement), on la retrouve par son
+   identifiant plutot que de rouvrir la piece qui occupe desormais ce rang. */
+function paquetBrouillon(){
+  var e = etapes()[pas];
+  var piece = (e && e.id === "piece" && S.pieces[e.i]) ? S.pieces[e.i].id : "";
+  return {v:1, pas:pas, piece:piece, quand:Date.now(), s:S};
+}
+/* Nombre de photos, plafonne : sert seulement a savoir si le constat est encore
+   assez leger pour tenir dans le stockage simple. */
+function comptePhotos(max){
+  var n = 0;
+  for(var i = 0; i < S.pieces.length; i++){
+    var p = S.pieces[i];
+    n += (p.photos || []).length;
+    for(var j = 0; j < p.elements.length; j++) n += (p.elements[j].photos || []).length;
+    if(n > max) return n;
+  }
+  return n;
 }
 function enregistreBrouillon(cb){
   if(minuteur){ clearTimeout(minuteur); minuteur = null; }
-  var paquet;
-  try{ paquet = {v:1, pas:pas, quand:Date.now(), s:JSON.parse(JSON.stringify(S))}; }
-  catch(e){ if(cb) cb(false); return; }
-  ecritBrouillon(paquet, function(ok){
+  /* Pas de copie profonde de l'etat : elle recopiait toutes les photos en
+     memoire a chaque frappe de touche (8 Mo mesures pour 40 photos), ce qui
+     mettait la tablette sous pression et pouvait la conduire a fermer
+     l'application. Les deux enregistrements font deja leur propre copie :
+     la base de l'appareil au moment de l'ecriture, le stockage simple en
+     convertissant en texte. */
+  /* On note aussi quelle PIECE etait ouverte : si son rang change entre-temps
+     (reclassement d'un ancien enregistrement), on la retrouve par son
+     identifiant plutot que de rouvrir la piece qui occupe desormais ce rang. */
+  ecritBrouillon(paquetBrouillon(), function(ok){
     badge(!!ok);
     if(!ok && Date.now() - (enregistreBrouillon.avert || 0) > 60000){
       enregistreBrouillon.avert = Date.now();
@@ -810,15 +890,18 @@ function etapes(){
 
 function manques(e){
   var m = [];
+  /* Un champ rempli d'espaces n'est pas rempli : sans ce controle, un constat
+     pouvait etre edite avec une adresse ou un nom de partie vide. */
+  function vide(v){ return !v || !String(v).trim(); }
   if(e.id === "type" && !S.type) m.push({msg:"Choisis d'abord entrée ou sortie.", ou:".choix"});
   if(e.id === "type" && S.type === "sortie" && !S.origineSortie) m.push({msg:"Indique comment établir cette sortie : de zéro, ou depuis le fichier d'entrée.", ou:".choix"});
   if(e.id === "logement"){
     if(!S.typeLogement) m.push({msg:"Choisis le type de logement.", ou:".choix"});
-    if(!S.adresse) m.push({msg:"L'adresse du logement est obligatoire.", ou:"[data-path=adresse]"});
+    if(vide(S.adresse)) m.push({msg:"L'adresse du logement est obligatoire.", ou:"[data-path=adresse]"});
   }
   if(e.id === "parties"){
-    if(!S.bailleur.nom) m.push({msg:"Le nom du bailleur est obligatoire.", ou:"[data-path='bailleur.nom']"});
-    if(!S.locataires[0] || !S.locataires[0].nom) m.push({msg:"Le nom du locataire est obligatoire.", ou:"[data-req=loc0]"});
+    if(vide(S.bailleur.nom)) m.push({msg:"Le nom du bailleur est obligatoire.", ou:"[data-path='bailleur.nom']"});
+    if(!S.locataires[0] || vide(S.locataires[0].nom)) m.push({msg:"Le nom du locataire est obligatoire.", ou:"[data-req=loc0]"});
   }
   if(e.id === "composition" && !S.pieces.length) m.push({msg:"Ajoute au moins une pièce pour continuer.", ou:".ligne-piece"});
   return m;
@@ -860,7 +943,12 @@ function suivant(){
 
 /* ================= rendu ================= */
 function dessine(){
-  var t = etapes(), e = t[pas];
+  var t = etapes();
+  /* Le nombre d'etapes depend du nombre de pieces : si celui-ci diminue alors
+     qu'on se trouve plus loin, l'etape courante doit etre ramenee dans les
+     bornes. Sans ce filet, l'ecran resterait blanc sans aucun moyen de revenir. */
+  pas = Math.max(0, Math.min(pas, t.length - 1));
+  var e = t[pas];
   el("#icone-pas").textContent = e.ic || "📋";
   el("#compte-pas").textContent = "Étape " + (pas+1) + " sur " + t.length;
   el("#titre-pas").textContent = e.titre;
@@ -884,7 +972,21 @@ function dessine(){
   padsSig = [];
   ({type:vType, logement:vLogement, parties:vParties, compteurs:vCompteurs,
     cles:vCles, composition:vComposition, piece:vPiece, final:vFinal, recap:vRecap})[e.id](b, e);
+
+  /* Aucun champ ne doit declencher les suggestions du navigateur. Sur
+     tablette, cette barre de suggestions se pose en bas de l'ecran, par-dessus
+     les boutons Retour et Suivant, et n'en repart plus : la visite se
+     retrouvait bloquee des qu'on avait saisi un texte. Les valeurs saisies ici
+     sont propres au logement visite, elles n'ont rien a gagner d'un carnet
+     d'adresses. */
+  els("input,textarea,select", b).forEach(function(c){
+    c.setAttribute("autocomplete", "off");
+    c.setAttribute("autocorrect", "off");
+  });
+
   planifie();
+  /* La hauteur de la barre du bas change avec la ligne « Ensuite : … ». */
+  ajusteBas();
 }
 
 function lie(inp, chemin){
@@ -935,7 +1037,7 @@ function vType(b){
       x.setAttribute("aria-pressed", S.origineSortie === o[0]);
       x.innerHTML = '<span class="emo">' + o[2] + "</span><span>" + o[1] + "</span><em>" + o[3] + "</em>";
       x.addEventListener("click", function(){
-        if(o[0] === "fichier"){ attenteSortie = true; el("#fichier-json").click(); }
+        if(o[0] === "fichier"){ ouvreFichier(true); }
         else { S.origineSortie = "manuelle"; dessine(); }
       });
       c2.appendChild(x);
@@ -1080,8 +1182,9 @@ function vCompteurs(b){
   a.innerHTML = "🔢  Ajouter un compteur";
   a.addEventListener("click", function(){
     var n = prompt("Nom du compteur :", "Fioul");
+    n = n && n.trim();
     if(!n) return;
-    S.compteurs.push({libelle:n, numero:"", index:"", unite:(prompt("Unité :", "L") || ""), index2:"", libelle2:""});
+    S.compteurs.push({libelle:n, numero:"", index:"", unite:((prompt("Unité :", "L") || "").trim()), index2:"", libelle2:""});
     dessine();
   });
   b.appendChild(a);
@@ -1118,9 +1221,25 @@ function renomme(type){
   var l = S.pieces.filter(function(p){ return p.type === type; });
   l.forEach(function(p, i){ if(!p.nomPerso) p.nom = l.length > 1 ? type.split(" / ")[0] + " " + (i+1) : type; });
 }
+/* Les pieces suivent l'ordre de la liste de composition, et pour un meme type
+   l'ordre d'ajout. Sans ce classement, une piece ajoutee apres coup restait a
+   la fin : on obtenait « Entrée 1 à 4, Séjour 1 à 4, Cuisine 1 à 7, Entrée 5
+   à 8… » au lieu d'une numerotation suivie. */
+function rangPiece(type){
+  var i = ORDRE.indexOf(type);
+  if(i !== -1) return i;
+  if(type === "Inventaire du mobilier") return ORDRE.length;
+  return ORDRE.length + 1;                       /* pieces personnalisees en dernier */
+}
+function ordonnePieces(){
+  S.pieces = S.pieces.map(function(p, i){ return {p:p, i:i}; })
+    .sort(function(a, b){ return (rangPiece(a.p.type) - rangPiece(b.p.type)) || (a.i - b.i); })
+    .map(function(x){ return x.p; });
+}
 function ajoutePiece(type){
   S.pieces.push({id:uid(), type:type, nom:type, nomPerso:false, observations:"", photos:[],
     elements:(PRESETS[type] || BASE).map(function(n){ return {nom:n, etat:"", commentaire:"", photos:[]}; })});
+  ordonnePieces();
   renomme(type);
 }
 function retirePiece(type){
@@ -1149,14 +1268,32 @@ function vComposition(b){
     bs[1].addEventListener("click", function(){ ajoutePiece(t); dessine(); });
     b.appendChild(d);
   });
+
+  /* Une piece dont le type ne figure pas dans la liste ci-dessus n'avait
+     aucune ligne : ni la piece personnalisee, ni l'inventaire conserve apres
+     un retour en logement nu ne pouvaient plus etre retires. On leur donne
+     leur propre ligne, nommee comme la piece. */
+  S.pieces.forEach(function(p, i){
+    if(liste.indexOf(p.type) !== -1) return;
+    var d = document.createElement("div");
+    d.className = "ligne-piece active";
+    d.innerHTML = past(EMO_PIECE[p.type] || "📐", true) + "<b></b>" +
+      '<div class="pas-a-pas"><button aria-label="Retirer">−</button></div>';
+    el("b", d).textContent = p.nom;
+    el("button", d).addEventListener("click", function(){ S.pieces.splice(i, 1); dessine(); });
+    b.appendChild(d);
+  });
+
   var a = document.createElement("button");
   a.className = "ajout";
   a.innerHTML = "📐  Pièce personnalisée";
   a.addEventListener("click", function(){
     var n = prompt("Nom de la pièce :", "Mezzanine");
+    n = n && n.trim();
     if(!n) return;
     S.pieces.push({id:uid(), type:"Pièce libre", nom:n, nomPerso:true, observations:"", photos:[],
       elements:BASE.map(function(x){ return {nom:x, etat:"", commentaire:"", photos:[]}; })});
+    ordonnePieces();
     dessine();
   });
   b.appendChild(a);
@@ -1296,6 +1433,7 @@ function vPiece(b, e){
   a.innerHTML = "➕  Ajouter un élément";
   a.addEventListener("click", function(){
     var n = prompt("Nom de l'élément :");
+    n = n && n.trim();
     if(n){ p.elements.push({nom:n, etat:"", commentaire:"", photos:[]}); dessine(); }
   });
   b.appendChild(a);
@@ -1303,10 +1441,26 @@ function vPiece(b, e){
   var o = document.createElement("div");
   o.className = "bloc-blanc";
   o.style.marginTop = "12px";
-  o.innerHTML = '<label class="champ"><span>Observations générales sur la pièce</span><textarea style="min-height:70px"></textarea></label>';
+  o.innerHTML = '<label class="champ"><span>Observations générales sur la pièce</span><textarea style="min-height:70px"></textarea></label>' +
+    '<div class="avant-lab" style="margin:14px 0 0">Photos d\'ensemble de la pièce</div>' +
+    '<div class="photo-actions">' +
+      '<label class="photo-btn"><span class="emo-btn">📷</span><span>Prendre une photo</span>' +
+      '<input type="file" accept="image/*" capture="environment"></label>' +
+      '<label class="photo-btn secondaire"><span class="emo-btn">🖼️</span><span>Depuis la tablette</span>' +
+      '<input type="file" accept="image/*" multiple></label>' +
+    '</div><div class="photos"></div>';
   var ta = el("textarea", o);
   ta.value = p.observations || "";
   ta.addEventListener("input", function(){ p.observations = ta.value; touche(); });
+  if(!p.photos) p.photos = [];
+  els(".photo-actions input", o).forEach(function(inp){
+    inp.addEventListener("click", function(){ enregistreBrouillon(); });
+    inp.addEventListener("change", function(ev){
+      ajoutePhotos(ev.target.files, p, p.nom + " · vue d'ensemble", function(){ dessinePhotos(el(".photos", o), p); });
+      ev.target.value = "";
+    });
+  });
+  dessinePhotos(el(".photos", o), p);
   b.appendChild(o);
 }
 
@@ -1315,8 +1469,12 @@ function dessinePhotos(box, cible){
   (cible.photos || []).forEach(function(o, k){
     var c = document.createElement("div");
     c.className = "photo";
-    c.innerHTML = '<img alt=""><button title="Supprimer">✕</button><span class="ts"></span>';
-    el("img", c).src = srcPhoto(o);
+    /* decoding="async" : le decodage des photos se fait hors du fil principal,
+       l'affichage de la piece ne se fige pas quand elle en compte plusieurs.
+       (Un report facon loading="lazy" serait sans effet : les photos sont
+       integrees au document, il n'y a aucun telechargement a retarder.) */
+    c.innerHTML = '<img alt="" decoding="async"><button title="Supprimer">✕</button><span class="ts"></span>';
+    el("img", c).src = vignettePhoto(o);
     el(".ts", c).textContent = tsPhoto(o);
     el("button", c).addEventListener("click", function(){ cible.photos.splice(k,1); dessinePhotos(box, cible); touche(); });
     box.appendChild(c);
@@ -1386,6 +1544,21 @@ function traitePhoto(f, legende, cb){
         c.textAlign = "left";
       }
       o = {src:cv.toDataURL("image/jpeg", 0.7), t:d.toISOString(), l:legende || ""};
+      /* Vignette destinee au seul affichage a l'ecran. Montrer la photo pleine
+         taille dans une case de 78 px oblige le navigateur a garder en memoire
+         une image decodee enorme ; comme chaque changement d'etape repeint ces
+         vignettes, la memoire du navigateur grimpait sans redescendre jusqu'a
+         faire fermer l'application par le systeme. Le document imprime et le
+         fichier .json continuent d'utiliser la photo pleine taille. */
+      try{
+        var mv = 320, rv = Math.min(1, mv / Math.max(cv.width, cv.height));
+        var vg = document.createElement("canvas");
+        vg.width = Math.max(1, Math.round(cv.width * rv));
+        vg.height = Math.max(1, Math.round(cv.height * rv));
+        vg.getContext("2d").drawImage(cv, 0, 0, vg.width, vg.height);
+        o.v = vg.toDataURL("image/jpeg", 0.6);
+        vg.width = 1; vg.height = 1;
+      }catch(e){}
       cv.width = 1; cv.height = 1;
     }catch(e){ o = null; }
     termine(o);
@@ -1546,7 +1719,13 @@ function vRecap(b){
   var tot = 0, fts = 0;
   S.pieces.forEach(function(x){ x.elements.forEach(function(y){ tot++; if(y.etat) fts++; }); });
   var pct = tot ? Math.round(fts / tot * 100) : 0;
-  var pret = pct === 100 && S.signatures.bailleur && S.signatures.locataire && S.adresse && S.bailleur.nom;
+  /* Memes exigences que la validation des etapes : le bandeau annoncait
+     « Prêt à signer » sur un constat sans nom de locataire, alors que la ligne
+     « Les parties » juste en dessous affichait « à compléter ». Un constat sans
+     aucun element a relever n'est pas pret non plus. */
+  var pret = tot > 0 && pct === 100 && S.signatures.bailleur && S.signatures.locataire &&
+    S.adresse && String(S.adresse).trim() && S.bailleur.nom && String(S.bailleur.nom).trim() &&
+    S.locataires[0] && S.locataires[0].nom && String(S.locataires[0].nom).trim();
   var hero = document.createElement("div");
   hero.className = "hero" + (pret ? " pret" : "");
   hero.innerHTML = '<span class="pastille grande">' + (pret ? "✅" : "📝") + "</span>" +
@@ -1567,7 +1746,8 @@ function vRecap(b){
     else if(e.id === "cles"){ st = S.cles.length + " ligne(s)"; }
     else if(e.id === "composition"){ st = S.pieces.length + " pièce(s)"; ko = !S.pieces.length; }
     else if(e.id === "piece"){ var p = S.pieces[e.i], f = p.elements.filter(function(x){ return x.etat; }).length;
-      st = f + "/" + p.elements.length; ko = f < p.elements.length; }
+      /* Une piece videe de tous ses elements etait comptee « faite » (0/0). */
+      st = f + "/" + p.elements.length; ko = !p.elements.length || f < p.elements.length; }
     else if(e.id === "final"){ st = (S.signatures.bailleur && S.signatures.locataire) ? ((S.paraphes && S.paraphes.bailleur && S.paraphes.locataire) ? "signé et paraphé" : "signé") : "non signé"; ko = !(S.signatures.bailleur && S.signatures.locataire); }
     var x = document.createElement("button");
     x.innerHTML = past(e.ic || "📋", true) + '<span>' + esc(e.titre) + '</span><span class="st' + (ko ? " ko" : "") + '">' + esc(st) + '</span>';
@@ -1642,6 +1822,16 @@ function sauver(){
   a.click();
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 2000);
 }
+/* Vrai si une visite est en cours et n'a pas encore ete enregistree :
+   ouvrir un fichier ecraserait ce travail sans retour possible. */
+function travailEnCours(){
+  return !sauvegarde && !!(S.adresse || S.pieces.length);
+}
+function ouvreFichier(pourSortie){
+  if(travailEnCours() && !confirm("Un état des lieux est en cours et n'a pas été enregistré. Ouvrir un fichier va le remplacer définitivement. Continuer ?")) return;
+  attenteSortie = !!pourSortie;
+  el("#fichier-json").click();
+}
 function charger(txt){
   try{
     var o = repare(JSON.parse(txt));
@@ -1650,7 +1840,18 @@ function charger(txt){
     if(attenteSortie){
       attenteSortie = false;
       if(S.type === "entree"){ basculeSortie(); }
-      else { S.origineSortie = "fichier"; }
+      else {
+        /* Ce fichier est deja une sortie : ses signatures et ses paraphes ont
+           ete recueillis pour un AUTRE constat. Les reprendre ferait porter au
+           document des signatures que personne n'a donnees pour celui-ci. */
+        S.origineSortie = "fichier";
+        S.signatures = {bailleur:"", locataire:""};
+        S.horodatage = {bailleur:"", locataire:""};
+        S.paraphes = {bailleur:"", locataire:""};
+        setTimeout(function(){
+          signale("Ce fichier est déjà un état des lieux de sortie : les signatures qu'il portait n'ont pas été reprises.");
+        }, 600);
+      }
     }
     allerA(0);
   }catch(e){
@@ -1660,8 +1861,16 @@ function charger(txt){
 }
 function versSortie(){
   if(S.type === "sortie"){ alert("Ce document est déjà un état des lieux de sortie."); return; }
-  if(!confirm("Créer l'état des lieux de sortie à partir de celui-ci ? Les états relevés à l'entrée seront gardés en référence et les notes repartiront à vide.")) return;
+  if(!confirm("Créer l'état des lieux de sortie à partir de celui-ci ?\n\n" +
+    "Le fichier de l'entrée va d'abord être enregistré : ce document devient la sortie, et les photos, " +
+    "observations et signatures de l'entrée en sont retirées. Les états relevés à l'entrée restent en référence.")) return;
+  /* Le constat d'entree ne survit pas a la bascule : sans ce fichier, ses
+     photos, ses observations et ses signatures seraient perdues sans retour. */
+  sauver();
   basculeSortie();
+  /* Cette sortie est derivee de l'entree ouverte, pas d'un fichier choisi :
+     aucune des deux cartes de l'etape 1 ne doit apparaitre selectionnee. */
+  S.origineSortie = "reprise";
   allerA(0);
 }
 function basculeSortie(){
@@ -1679,63 +1888,90 @@ function basculeSortie(){
   });
   S.compteurs.forEach(function(c){ c.indexEntree = c.index; c.index2Entree = c.index2; c.index = ""; c.index2 = ""; });
   S.observations = "";
+  /* Le document de sortie doit repartir vierge de toute trace de signature :
+     sans cela il porterait les paraphes de l'entree sur chaque page et la
+     mention « Signé le … » a la date de l'entree, alors que personne n'a
+     encore signé la sortie. */
   S.signatures = {bailleur:"", locataire:""};
+  S.horodatage = {bailleur:"", locataire:""};
+  S.paraphes = {bailleur:"", locataire:""};
 }
 
 /* ================= document imprimé ================= */
 function docHTML(emp){
   var sortie = S.type === "sortie";
   var ns = 4;
+  /* Assemble en ignorant les champs vides : sans cela un logement dont le type
+     n'est pas renseigne produisait « — 12 rue des Lilas » ou « — non meublé ». */
+  function joint(parties, sep){
+    return parties.filter(function(x){ return x != null && String(x).trim() !== ""; })
+                  .map(function(x){ return esc(x); }).join(sep || " — ");
+  }
   var h = '<div class="doc-tete"><div><h1>État des lieux ' + (sortie ? "de sortie" : "d'entrée") + '</h1><div>' +
-    esc(S.typeLogement) + " — " + esc(S.adresse) + " — " + esc(S.ville) + '</div></div>' +
+    joint([S.typeLogement, S.adresse, S.ville]) + '</div></div>' +
     '<div style="text-align:right;font-family:\'IBM Plex Mono\',monospace">Établi le ' + frDate(S.date) + '</div></div>';
 
   h += '<h2>1. Le bien et les parties</h2><table class="kv">' +
-    '<tr><td>Logement</td><td>' + esc(S.typeLogement) + (S.surface ? " — " + esc(S.surface) + " m²" : "") + (S.etage ? " — " + esc(S.etage) : "") + " — " + (S.meuble === "oui" ? "meublé" : "non meublé") + '</td></tr>' +
-    '<tr><td>Adresse</td><td>' + esc(S.adresse) + " " + esc(S.ville) + '</td></tr>' +
-    '<tr><td>Bailleur</td><td>' + esc(S.bailleur.nom) + (S.bailleur.adresse ? " — " + esc(S.bailleur.adresse) : "") + (S.bailleur.contact ? " — " + esc(S.bailleur.contact) : "") + '</td></tr>';
+    '<tr><td>Logement</td><td>' + joint([S.typeLogement, S.surface ? S.surface + " m²" : "", S.etage, S.meuble === "oui" ? "meublé" : "non meublé"]) + '</td></tr>' +
+    '<tr><td>Adresse</td><td>' + joint([S.adresse, S.ville], ", ") + '</td></tr>' +
+    '<tr><td>Bailleur</td><td>' + joint([S.bailleur.nom, S.bailleur.adresse, S.bailleur.contact]) + '</td></tr>';
   S.locataires.forEach(function(l, i){
-    h += '<tr><td>Locataire' + (S.locataires.length > 1 ? " " + (i+1) : "") + '</td><td>' + esc(l.nom) + (l.adresse ? " — " + esc(l.adresse) : "") + (l.contact ? " — " + esc(l.contact) : "") + '</td></tr>';
+    h += '<tr><td>Locataire' + (S.locataires.length > 1 ? " " + (i+1) : "") + '</td><td>' + joint([l.nom, l.adresse, l.contact]) + '</td></tr>';
   });
   h += '<tr><td>Présents au constat</td><td>' + esc(S.presents) + '</td></tr></table>';
 
-  h += '<h2>2. Relevés de compteurs</h2><table><tr><th>Compteur</th><th>N° / PDL</th>' + (sortie ? "<th>Index à l'entrée</th>" : "") + '<th>Index relevé</th></tr>';
+  h += '<h2>2. Relevés de compteurs</h2><table><thead><tr><th>Compteur</th><th>N° / PDL</th>' + (sortie ? "<th>Index à l'entrée</th>" : "") + '<th>Index relevé</th></tr></thead><tbody>';
+  /* Une unite seule (« kWh ») dans une case ferait croire a un releve effectue :
+     une case non renseignee doit rester vide. */
+  function releve(v, unite){ v = (v == null ? "" : String(v)).trim(); return v ? esc(v) + " " + esc(unite) : ""; }
   S.compteurs.forEach(function(c){
     h += "<tr><td>" + esc(c.libelle) + "</td><td>" + esc(c.numero) + "</td>" +
-      (sortie ? "<td>" + esc(c.indexEntree || "") + "</td>" : "") +
-      "<td>" + esc(c.index) + " " + esc(c.unite) + "</td></tr>";
+      (sortie ? "<td>" + releve(c.indexEntree, c.unite) + "</td>" : "") +
+      "<td>" + releve(c.index, c.unite) + "</td></tr>";
     if(c.libelle2){
       h += '<tr><td style="padding-left:14px">' + esc(c.libelle) + " — " + esc(c.libelle2) + "</td><td></td>" +
-        (sortie ? "<td>" + esc(c.index2Entree || "") + "</td>" : "") +
-        "<td>" + esc(c.index2 || "") + " " + esc(c.unite) + "</td></tr>";
+        (sortie ? "<td>" + releve(c.index2Entree, c.unite) + "</td>" : "") +
+        "<td>" + releve(c.index2, c.unite) + "</td></tr>";
     }
   });
   h += "</table>";
 
-  h += "<h2>3. Clés et moyens d'accès</h2><table><tr><th>Désignation</th><th>Nombre</th><th>Observations</th></tr>";
+  h += "<h2>3. Clés et moyens d'accès</h2><table><thead><tr><th>Désignation</th><th>Nombre</th><th>Observations</th></tr></thead><tbody>";
   S.cles.forEach(function(c){ h += "<tr><td>" + esc(c.designation) + "</td><td>" + esc(c.nombre) + "</td><td>" + esc(c.commentaire) + "</td></tr>"; });
-  h += "</table>";
+  h += "</tbody></table>";
 
   h += "<h2>4. Description pièce par pièce</h2>";
   S.pieces.forEach(function(p){
-    h += '<div class="piece-doc"><h3>' + esc(p.nom) + '</h3><table><tr><th style="width:26%">Élément</th>' +
+    h += '<div class="piece-doc"><h3>' + esc(p.nom) + '</h3><table><thead><tr><th style="width:26%">Élément</th>' +
       (sortie ? '<th style="width:14%">État à l\'entrée</th>' : "") +
-      '<th style="width:7%">Nb</th><th style="width:13%">État constaté</th><th>Observations</th></tr>';
+      '<th style="width:7%">Nb</th><th style="width:13%">État constaté</th><th>Observations</th></tr></thead><tbody>';
     p.elements.forEach(function(e){
       var ph = (e.photos && e.photos.length) ? " (" + e.photos.length + " photo" + (e.photos.length > 1 ? "s" : "") + ")" : "";
-      var baisse = (RANG[e.etatEntree] && RANG[e.etat] && RANG[e.etat] < RANG[e.etatEntree]);
-      h += "<tr" + (baisse ? ' class="baisse"' : "") + "><td>" + esc(e.nom) + "</td>" +
+      /* Meme lecture que la section « Comparaison entrée / sortie » : le rouge
+         signale une degradation a justifier (au moins deux niveaux), la teinte
+         legere un simple ecart d'un niveau. Sans cette distinction, une ligne
+         etait surlignee comme un probleme ici et decrite comme une usure
+         normale quelques pages plus loin. */
+      var chute = (RANG[e.etatEntree] && RANG[e.etat]) ? RANG[e.etatEntree] - RANG[e.etat] : 0;
+      var cl = chute >= 2 ? ' class="baisse"' : (chute === 1 ? ' class="baisse-legere"' : "");
+      h += "<tr" + cl + "><td>" + esc(e.nom) + "</td>" +
         (sortie ? "<td>" + esc(NOM_ETAT[e.etatEntree] || "—") + (e.commentaireEntree ? '<br><span style="font-size:8.5px">' + esc(e.commentaireEntree) + "</span>" : "") + "</td>" : "") +
         "<td>" + esc(e.nb || "") + "</td>" +
         "<td>" + esc(NOM_ETAT[e.etat] || "—") + "</td><td>" + esc(e.commentaire) + ph + "</td></tr>";
     });
-    h += "</table>";
+    h += "</tbody></table>";
     if(p.observations) h += '<div style="margin:2px 0 4px"><em>Observations : ' + esc(p.observations).replace(/\n/g, "<br>") + "</em></div>";
     var g = "";
     p.elements.forEach(function(e){
-      (e.photos || []).forEach(function(o){ g += '<figure><img src="' + srcPhoto(o) + '" alt=""><figcaption>' + esc(p.nom) + " — " + esc(e.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>"; });
+      (e.photos || []).forEach(function(o){
+        var s = srcImg(srcPhoto(o));
+        if(s) g += '<figure><img src="' + s + '" alt=""><figcaption>' + esc(p.nom) + " — " + esc(e.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>";
+      });
     });
-    (p.photos || []).forEach(function(o){ g += '<figure><img src="' + srcPhoto(o) + '" alt=""><figcaption>' + esc(p.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>"; });
+    (p.photos || []).forEach(function(o){
+      var s = srcImg(srcPhoto(o));
+      if(s) g += '<figure><img src="' + s + '" alt=""><figcaption>' + esc(p.nom) + "<br>" + esc(tsPhoto(o)) + "</figcaption></figure>";
+    });
     if(g) h += '<div class="ph">' + g + "</div>";
     h += "</div>";
   });
@@ -1747,7 +1983,7 @@ function docHTML(emp){
     if(!ec.length){
       h += "<p>Aucun élément n'a été relevé dans un état inférieur à celui constaté à l'entrée.</p>";
     } else {
-      h += '<table><tr><th>Pièce</th><th>Élément</th><th>À l\'entrée</th><th>À la sortie</th><th>Lecture</th></tr>';
+      h += '<table><thead><tr><th>Pièce</th><th>Élément</th><th>À l\'entrée</th><th>À la sortie</th><th>Lecture</th></tr></thead><tbody>';
       ec.forEach(function(x){
         h += "<tr" + (x.delta >= 2 ? ' class="baisse"' : "") + "><td>" + esc(x.piece) + "</td><td>" + esc(x.elt) + "</td><td>" +
           esc(x.avant) + "</td><td>" + esc(x.apres) + "</td><td>" +
@@ -1761,12 +1997,15 @@ function docHTML(emp){
   h += "<table><tr><td>" + (S.observations ? esc(S.observations).replace(/\n/g, "<br>") : "Néant.") + "</td></tr></table>";
   h += '<p style="margin:6px 0">Fait à ' + esc(S.faitA || "……………") + ", le " + frDate(S.faitLe) + ", en autant d'exemplaires que de parties, remis à chacune d'elles au moment de la signature.</p>";
   var ho = S.horodatage || {};
+  var sigB = srcImg(S.signatures.bailleur), sigL = srcImg(S.signatures.locataire);
   h += '<div class="sig-doc"><div><strong>Le bailleur</strong><br>' + esc(S.bailleur.nom) + "<br>" +
-    (S.signatures.bailleur ? '<img src="' + S.signatures.bailleur + '" alt="">' : "") +
-    (ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
-    '<div><strong>Le(s) locataire(s)</strong><br>' + esc(S.locataires.map(function(l){ return l.nom; }).join(", ")) + "<br>" +
-    (S.signatures.locataire ? '<img src="' + S.signatures.locataire + '" alt="">' : "") +
-    (ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
+    (sigB ? '<img src="' + sigB + '" alt="">' : "") +
+    (sigB && ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
+    /* joint() ecarte les locataires sans nom : sans cela le bloc de signature
+       se terminait par une virgule flottante (« Marie Dupont, »). */
+    '<div><strong>Le(s) locataire(s)</strong><br>' + joint(S.locataires.map(function(l){ return l.nom; }), ", ") + "<br>" +
+    (sigL ? '<img src="' + sigL + '" alt="">' : "") +
+    (sigL && ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
 
   h += '<div class="mentions">État des lieux établi contradictoirement et amiablement entre les parties, conformément à l\'article 3-2 de la loi n° 89-462 du 6 juillet 1989 et au décret n° 2016-382 du 30 mars 2016. ' +
     "Il porte sur l'ensemble des locaux et équipements d'usage privatif dont le locataire a la jouissance exclusive. " +
@@ -1777,7 +2016,7 @@ function docHTML(emp){
     (emp ? '<br>Empreinte SHA-256 du document : <span style="font-family:\'IBM Plex Mono\',monospace">' + esc(emp) + "</span> — toute modification ultérieure du fichier source modifie cette empreinte." : "") + "</div>";
   if(S.vetuste !== false){
     h += '<div class="annexe"><h2>Annexe — Grille de vétusté indicative</h2>' +
-      '<table><tr><th>Élément</th><th>Durée de vie</th><th>Franchise</th><th>Abattement annuel</th><th>Part résiduelle</th></tr>';
+      '<table><thead><tr><th>Élément</th><th>Durée de vie</th><th>Franchise</th><th>Abattement annuel</th><th>Part résiduelle</th></tr></thead><tbody>';
     VETUSTE.forEach(function(v){
       h += "<tr><td>" + esc(v[0]) + "</td><td>" + v[1] + " ans</td><td>" + v[2] + " an(s)</td><td>" + esc(v[3]) + "</td><td>" + esc(v[4]) + "</td></tr>";
     });
@@ -1786,24 +2025,67 @@ function docHTML(emp){
   }
 
   var par = S.paraphes || {bailleur:"", locataire:""};
-  h += '<div class="pied-page">' +
-    '<div>Paraphe bailleur : ' + (par.bailleur ? '<img src="' + par.bailleur + '" alt="">' : '<span class="vide"></span>') + '</div>' +
-    '<div>Paraphe locataire : ' + (par.locataire ? '<img src="' + par.locataire + '" alt="">' : '<span class="vide"></span>') + '</div>' +
-    '<div class="ref">' + esc(S.adresse || "") + ' — ' + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
-  return h;
+  var parB = srcImg(par.bailleur), parL = srcImg(par.locataire);
+  var pied = '<div class="pied-page">' +
+    '<div>Paraphe bailleur : ' + (parB ? '<img src="' + parB + '" alt="">' : '<span class="vide"></span>') + '</div>' +
+    '<div>Paraphe locataire : ' + (parL ? '<img src="' + parL + '" alt="">' : '<span class="vide"></span>') + '</div>' +
+    '<div class="ref">' + (S.adresse ? esc(S.adresse) + ' — ' : '') + (sortie ? "sortie" : "entrée") + ' du ' + frDate(S.date) + '</div></div>';
+
+  /* Le pied de page est place dans un <tfoot> : c'est le seul moyen fiable, a
+     l'impression, d'obtenir une bande repetee en bas de CHAQUE page qui reserve
+     vraiment sa place. Avec un element en position:fixed, le navigateur le
+     dessinait par-dessus le tableau : les dernieres lignes de chaque page
+     etaient bien dans le document mais recouvertes, donc perdues au papier. */
+  return '<table class="mise"><tfoot><tr><td>' + pied + '</td></tr></tfoot>' +
+         '<tbody><tr><td>' + h + '</td></tr></tbody></table>';
+}
+/* Nom du fichier : EDL-entree/sortie-Nom du locataire-Lieu de la location.
+   Les accents sont ramenes a leur lettre simple plutot que remplaces par des
+   tirets, sinon « Nîmes » devenait « N-mes ». */
+function propre(s, max){
+  return String(s == null ? "" : s)
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   /* \u00ab N\u00eemes \u00bb -> \u00ab Nimes \u00bb */
+    /* On n'ecarte que ce qui est interdit ou genant dans un nom de fichier :
+       un nom ecrit dans un autre alphabet doit rester lisible, sinon tous les
+       constats d'un meme locataire finissaient par s'appeler \u00ab EDL-entree \u00bb. */
+    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]+/g, " ")
+    .replace(/[\s.,;]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .slice(0, max)
+    .replace(/^-+|-+$/g, "");
 }
 function nomDoc(){
-  var v = (S.ville || S.adresse || "logement").replace(/[^a-zA-Z0-9]+/g, "-").slice(0, 28);
-  return "EDL-" + (S.type === "sortie" ? "sortie" : "entree") + "-" + v + "-" + S.date;
+  var locataire = propre(S.locataires[0] && S.locataires[0].nom, 40);
+  /* La ville plutot que l'adresse : un nom de fichier plus court et plus
+     lisible. On retombe sur l'adresse si la ville n'est pas renseignee. */
+  var lieu = propre(S.ville || S.adresse, 48);
+  var bouts = ["EDL", (S.type === "sortie" ? "sortie" : "entree"), locataire, lieu]
+    .filter(function(x){ return x; });
+  /* Sans locataire ni lieu, la date evite que tous les constats portent le
+     meme nom et s'ecrasent les uns les autres. */
+  if(!locataire && !lieu) bouts.push(S.date);
+  return bouts.join("-");
 }
+/* Vrai pendant une impression lancee par « Terminer » : le document est alors
+   deja rendu avec son empreinte, il ne faut pas le regenerer sans elle. */
+var enImpression = false;
+/* Titre d'origine retenu une fois pour toutes : le relire au moment d'imprimer
+   faisait qu'une seconde impression lancee trop vite memorisait le nom de
+   fichier de la premiere, et l'onglet gardait ce nom definitivement. */
+var titreOrigine = document.title;
 function imprimer(){
+  if(enImpression) return;                 /* une impression est deja engagee */
+  enImpression = true;
   empreinte(function(emp){
     el("#impression").innerHTML = docHTML(emp);
-    var titre = document.title;
     document.title = nomDoc();
     setTimeout(function(){
       window.print();
-      setTimeout(function(){ document.title = titre; }, 1500);
+      setTimeout(function(){
+        document.title = titreOrigine;
+        enImpression = false;
+        el("#impression").innerHTML = "";   /* libere le document et ses photos */
+      }, 1500);
     }, 120);
   });
 }
@@ -1818,8 +2100,16 @@ function apercu(){
 function fermeApercu(){
   el("#apercu").classList.remove("vu");
   document.body.classList.remove("fige");
+  /* Le masquer ne suffit pas : le document et toutes ses photos restaient
+     attaches a la page, soit une vingtaine de mega-octets retenus pour rien
+     jusqu'a la fermeture de l'application. */
+  el("#apercu-doc").innerHTML = "";
 }
 function terminer(){
+  /* Deux appuis rapproches enregistraient le fichier deux fois. */
+  if(enImpression || terminer.enCours) return;
+  terminer.enCours = true;
+  setTimeout(function(){ terminer.enCours = false; }, 2500);
   sauver();
   var manque = !S.signatures.bailleur || !S.signatures.locataire;
   signale(manque
@@ -1827,6 +2117,58 @@ function terminer(){
     : "Fichier .json enregistré. La fenêtre d'impression s'ouvre : choisis « Enregistrer au format PDF ».");
   setTimeout(imprimer, 1100);
 }
+
+/* ================= barre du bas toujours atteignable =================
+   Sur telephone et tablette, le navigateur ou le systeme posent souvent
+   quelque chose en bas de l'ecran : clavier, barre de saisie automatique,
+   barre de navigation. Avec un simple bottom:0, la barre Retour / Suivant se
+   dessinait dessous et devenait impossible a atteindre. On mesure donc la
+   zone reellement visible et on remonte la barre d'autant. On en profite pour
+   reserver sous le contenu la hauteur reelle de la barre, plutot qu'une
+   valeur fixe qui ne correspond pas a toutes les tailles d'ecran. */
+var attenteBas = null;
+function ajusteBas(){
+  if(attenteBas) return;
+  attenteBas = requestAnimationFrame(function(){
+    attenteBas = null;
+    var vv = window.visualViewport;
+    var cache = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    document.documentElement.style.setProperty("--fond", cache + "px");
+    var nav = el(".nav"), m = el("main");
+    if(nav && m){
+      /* La reserve doit couvrir la barre ET la hauteur masquee : la barre
+         etant remontee de `cache`, sans cela le bas de l'etape ne pouvait
+         plus etre amene au-dessus d'elle quand le clavier etait ouvert. */
+      var h = Math.ceil(nav.getBoundingClientRect().height);
+      if(h) m.style.paddingBottom = (h + 26 + cache) + "px";
+    }
+  });
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener("resize", ajusteBas);
+  window.visualViewport.addEventListener("scroll", ajusteBas);
+}
+window.addEventListener("resize", ajusteBas);
+window.addEventListener("orientationchange", ajusteBas);
+/* Quand un champ prend le focus, le clavier s'ouvre : on replace la barre et
+   on amene le champ dans la zone visible. */
+document.addEventListener("focusin", function(ev){
+  ajusteBas();
+  var c = ev.target;
+  if(!c || !/^(INPUT|TEXTAREA|SELECT)$/.test(c.tagName)) return;
+  /* On ne deplace la vue que si le champ est reellement hors de la zone
+     utilisable : le recentrer a chaque fois qu'on le touche serait penible. */
+  setTimeout(function(){
+    try{
+      var r = c.getBoundingClientRect();
+      var fond = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--fond")) || 0;
+      var nav = el(".nav");
+      var bas = window.innerHeight - fond - (nav ? nav.getBoundingClientRect().height : 0);
+      if(r.bottom > bas || r.top < 0) c.scrollIntoView({block:"center", behavior:"smooth"});
+    }catch(e){}
+  }, 350);
+});
+document.addEventListener("focusout", function(){ setTimeout(ajusteBas, 100); });
 
 /* ================= navigation et menu ================= */
 el("#apercu-fermer").addEventListener("click", fermeApercu);
@@ -1840,8 +2182,12 @@ els("#menu button").forEach(function(b){
   b.addEventListener("click", function(){
     var a = b.getAttribute("data-act");
     el("#menu").classList.remove("ouvert");
-    if(a === "sauver") sauver();
-    else if(a === "ouvrir"){ attenteSortie = false; el("#fichier-json").click(); }
+    /* Toujours accessible depuis le haut de l'ecran : si la barre du bas se
+       retrouve masquee par une surcouche du navigateur, la visite peut
+       continuer malgre tout. */
+    if(a === "suivant") suivant();
+    else if(a === "sauver") sauver();
+    else if(a === "ouvrir"){ ouvreFichier(false); }
     else if(a === "sortie") versSortie();
     else if(a === "imprimer") terminer();
     else if(a === "apercu") apercu();
@@ -1863,7 +2209,13 @@ window.addEventListener("beforeunload", function(ev){
   ev.preventDefault();
   ev.returnValue = "";
 });
-window.addEventListener("beforeprint", function(){ if(!el("#impression").innerHTML) el("#impression").innerHTML = docHTML(""); });
+/* Toujours regenerer : le garde precedent (« seulement si le bloc est vide »)
+   faisait imprimer un instantane perime des qu'une impression avait deja eu
+   lieu — un Ctrl+P en debut de visite figeait un document quasi vide. */
+window.addEventListener("beforeprint", function(){ if(!enImpression) el("#impression").innerHTML = docHTML(""); });
+/* Une fois l'impression terminee, le document et ses photos n'ont plus lieu
+   d'occuper la memoire : ils y restaient jusqu'a la fermeture. */
+window.addEventListener("afterprint", function(){ if(!enImpression) el("#impression").innerHTML = ""; });
 
 function repare(o){
   if(!o || typeof o !== "object" || !o.pieces) return null;
@@ -1872,14 +2224,32 @@ function repare(o){
   if(!o.paraphes) o.paraphes = {bailleur:"", locataire:""};
   if(!o.horodatage) o.horodatage = {bailleur:"", locataire:""};
   if(!o.bailleur) o.bailleur = {nom:"", contact:"", adresse:""};
-  if(!Array.isArray(o.locataires) || !o.locataires.length) o.locataires = [{nom:"", contact:"", adresse:""}];
-  if(!Array.isArray(o.compteurs)) o.compteurs = [];
-  if(!Array.isArray(o.cles)) o.cles = [];
+  /* On ecarte les entrees vides ou non exploitables : un tableau du genre
+     [null] passait les controles et faisait planter l'etape « Les parties »
+     ainsi que l'edition du document. */
+  function objets(v){ return (Array.isArray(v) ? v : []).filter(function(x){ return x && typeof x === "object"; }); }
+  o.locataires = objets(o.locataires);
+  if(!o.locataires.length) o.locataires = [{nom:"", contact:"", adresse:""}];
+  o.compteurs = objets(o.compteurs);
+  o.cles = objets(o.cles);
+  o.pieces = objets(o.pieces);
+  if(!o.date) o.date = new Date().toISOString().slice(0,10);
+  if(!o.faitLe) o.faitLe = o.date;
   o.pieces.forEach(function(p){
+    if(typeof p.type !== "string" || !p.type) p.type = "Pièce libre";
+    if(typeof p.nom !== "string" || !p.nom) p.nom = p.type;
     if(!Array.isArray(p.elements)) p.elements = [];
     if(!Array.isArray(p.photos)) p.photos = [];
-    p.elements.forEach(function(e){ if(!Array.isArray(e.photos)) e.photos = []; });
+    p.elements = objets(p.elements);
+    p.elements.forEach(function(e){
+      if(typeof e.nom !== "string" || !e.nom) e.nom = "Élément";
+      if(!Array.isArray(e.photos)) e.photos = [];
+    });
   });
+  /* Remet aussi en ordre les etats des lieux enregistres avant ce classement. */
+  o.pieces = o.pieces.map(function(p, i){ return {p:p, i:i}; })
+    .sort(function(a, b){ return (rangPiece(a.p.type) - rangPiece(b.p.type)) || (a.i - b.i); })
+    .map(function(x){ return x.p; });
   return o;
 }
 
@@ -1899,6 +2269,11 @@ function repare(o){
           var etp = etapes();
           var np = (r && typeof r.pas === "number") ? r.pas : 0;
           pas = Math.max(0, Math.min(np, etp.length - 1));
+          if(r && r.piece){
+            for(var i = 0; i < etp.length; i++){
+              if(etp[i].id === "piece" && S.pieces[etp[i].i] && S.pieces[etp[i].i].id === r.piece){ pas = i; break; }
+            }
+          }
           if(S.adresse || S.pieces.length){
             setTimeout(function(){ signale("Reprise automatique : tout a été retrouvé."); }, 500);
           }
@@ -1909,25 +2284,58 @@ function repare(o){
   }catch(e){ clearTimeout(secours); go(); }
 })();
 
-/* filet de sécurité : l'application peut être fermée par le système
-   pendant la prise de vue — on écrit dès que la page passe en arrière-plan */
+/* Filet de securite : l'application peut etre fermee par le systeme pendant la
+   prise de vue. L'ecriture dans la base de l'appareil est asynchrone et sa
+   transaction n'a pas toujours le temps d'aboutir quand la page est detruite :
+   les dernieres secondes de saisie etaient alors perdues. On double donc avec
+   une ecriture immediate dans le stockage simple, qui aboutit toujours quand
+   le constat y tient encore (debut de visite, avant les photos). */
+function enregistreVite(){
+  enregistreBrouillon();
+  /* Au-dela de quelques photos, le constat ne tiendrait de toute facon pas
+     dans le stockage simple : inutile d'en payer la conversion en texte, qui
+     porterait sur plusieurs mega-octets a chaque changement d'application. */
+  if(comptePhotos(8) <= 8){ try{ ecritLS(paquetBrouillon()); }catch(e){} }
+}
 document.addEventListener("visibilitychange", function(){
-  if(document.visibilityState === "hidden") enregistreBrouillon();
+  if(document.visibilityState === "hidden") enregistreVite();
 });
-window.addEventListener("pagehide", function(){ enregistreBrouillon(); });
-window.addEventListener("blur", function(){ enregistreBrouillon(); });
+window.addEventListener("pagehide", enregistreVite);
+window.addEventListener("blur", enregistreVite);
 
+/* Une mise a jour ne doit JAMAIS interrompre une visite en cours : le
+   rechargement donnait l'impression que l'application se fermait toute seule
+   au milieu d'un constat. Tant qu'un etat des lieux est commence, on se
+   contente d'enregistrer ; la nouvelle version s'appliquera a la prochaine
+   ouverture, la page etant de toute facon relue sur le reseau quand il est
+   disponible. Renvoie vrai si le rechargement a ete engage. */
+function appliqueMaj(){
+  if(S.adresse || S.pieces.length){ enregistreBrouillon(); return false; }
+  enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
+  return true;
+}
+function majSw(reg){
+  try{ var p = reg.update(); if(p && p.catch) p.catch(function(){}); }catch(e){}
+}
 if("serviceWorker" in navigator){
   window.addEventListener("load", function(){
     navigator.serviceWorker.register("sw.js").then(function(reg){
-      try{ reg.update(); }catch(e){}
-      setInterval(function(){ try{ reg.update(); }catch(e){} }, 60 * 60 * 1000);
+      /* Hors reseau, reg.update() rejette une promesse : sans .catch elle
+         remontait en erreur non geree a chaque lancement et chaque heure. */
+      majSw(reg);
+      setInterval(function(){ majSw(reg); }, 60 * 60 * 1000);
     }).catch(function(){});
+    /* Au tout premier lancement, la page n'est pas encore controlee : la prise
+       de controle initiale declenche aussi « controllerchange », ce qui
+       rechargeait l'application quelques instants apres son ouverture. On ne
+       recharge que pour une VRAIE mise a jour, c'est-a-dire un changement de
+       service worker alors qu'un autre etait deja aux commandes. */
+    var premiereInstallation = !navigator.serviceWorker.controller;
     var recharge = false;
     navigator.serviceWorker.addEventListener("controllerchange", function(){
+      if(premiereInstallation){ premiereInstallation = false; return; }
       if(recharge) return;
-      recharge = true;
-      enregistreBrouillon(function(){ setTimeout(function(){ location.reload(); }, 150); });
+      recharge = appliqueMaj();
     });
   });
 }
