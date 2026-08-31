@@ -777,13 +777,21 @@ function litLS(cb){
     cb(t ? JSON.parse(t) : null);
   }catch(e){ cb(null); }
 }
+/* On garde le plus recent des deux enregistrements : celui de la base de
+   l'appareil, complet mais ecrit de facon differee, et celui du stockage
+   simple, ecrit immediatement quand l'application passe en arriere-plan. */
+function plusRecent(a, b){
+  if(!a) return b || null;
+  if(!b) return a;
+  return ((b.quand || 0) > (a.quand || 0)) ? b : a;
+}
 function litBrouillon(cb){
   ouvreDB(function(d){
     if(d){
       try{
         var tx = d.transaction("etat", "readonly");
         var q = tx.objectStore("etat").get("brouillon");
-        q.onsuccess = function(){ if(q.result) return cb(q.result); litLS(cb); };
+        q.onsuccess = function(){ litLS(function(l){ cb(plusRecent(q.result, l)); }); };
         q.onerror = function(){ litLS(cb); };
         return;
       }catch(e){}
@@ -809,6 +817,26 @@ function badge(ok){
   clearTimeout(badge.h);
   badge.h = setTimeout(function(){ m.classList.remove("vu"); }, 1600);
 }
+/* On note aussi quelle PIECE etait ouverte : si son rang change entre-temps
+   (reclassement d'un ancien enregistrement), on la retrouve par son
+   identifiant plutot que de rouvrir la piece qui occupe desormais ce rang. */
+function paquetBrouillon(){
+  var e = etapes()[pas];
+  var piece = (e && e.id === "piece" && S.pieces[e.i]) ? S.pieces[e.i].id : "";
+  return {v:1, pas:pas, piece:piece, quand:Date.now(), s:S};
+}
+/* Nombre de photos, plafonne : sert seulement a savoir si le constat est encore
+   assez leger pour tenir dans le stockage simple. */
+function comptePhotos(max){
+  var n = 0;
+  for(var i = 0; i < S.pieces.length; i++){
+    var p = S.pieces[i];
+    n += (p.photos || []).length;
+    for(var j = 0; j < p.elements.length; j++) n += (p.elements[j].photos || []).length;
+    if(n > max) return n;
+  }
+  return n;
+}
 function enregistreBrouillon(cb){
   if(minuteur){ clearTimeout(minuteur); minuteur = null; }
   /* Pas de copie profonde de l'etat : elle recopiait toutes les photos en
@@ -820,11 +848,7 @@ function enregistreBrouillon(cb){
   /* On note aussi quelle PIECE etait ouverte : si son rang change entre-temps
      (reclassement d'un ancien enregistrement), on la retrouve par son
      identifiant plutot que de rouvrir la piece qui occupe desormais ce rang. */
-  var etapeEnCours = etapes()[pas];
-  var piece = (etapeEnCours && etapeEnCours.id === "piece" && S.pieces[etapeEnCours.i])
-    ? S.pieces[etapeEnCours.i].id : "";
-  var paquet = {v:1, pas:pas, piece:piece, quand:Date.now(), s:S};
-  ecritBrouillon(paquet, function(ok){
+  ecritBrouillon(paquetBrouillon(), function(ok){
     badge(!!ok);
     if(!ok && Date.now() - (enregistreBrouillon.avert || 0) > 60000){
       enregistreBrouillon.avert = Date.now();
@@ -1674,7 +1698,13 @@ function vRecap(b){
   var tot = 0, fts = 0;
   S.pieces.forEach(function(x){ x.elements.forEach(function(y){ tot++; if(y.etat) fts++; }); });
   var pct = tot ? Math.round(fts / tot * 100) : 0;
-  var pret = pct === 100 && S.signatures.bailleur && S.signatures.locataire && S.adresse && S.bailleur.nom;
+  /* Memes exigences que la validation des etapes : le bandeau annoncait
+     « Prêt à signer » sur un constat sans nom de locataire, alors que la ligne
+     « Les parties » juste en dessous affichait « à compléter ». Un constat sans
+     aucun element a relever n'est pas pret non plus. */
+  var pret = tot > 0 && pct === 100 && S.signatures.bailleur && S.signatures.locataire &&
+    S.adresse && String(S.adresse).trim() && S.bailleur.nom && String(S.bailleur.nom).trim() &&
+    S.locataires[0] && S.locataires[0].nom && String(S.locataires[0].nom).trim();
   var hero = document.createElement("div");
   hero.className = "hero" + (pret ? " pret" : "");
   hero.innerHTML = '<span class="pastille grande">' + (pret ? "✅" : "📝") + "</span>" +
@@ -1695,7 +1725,8 @@ function vRecap(b){
     else if(e.id === "cles"){ st = S.cles.length + " ligne(s)"; }
     else if(e.id === "composition"){ st = S.pieces.length + " pièce(s)"; ko = !S.pieces.length; }
     else if(e.id === "piece"){ var p = S.pieces[e.i], f = p.elements.filter(function(x){ return x.etat; }).length;
-      st = f + "/" + p.elements.length; ko = f < p.elements.length; }
+      /* Une piece videe de tous ses elements etait comptee « faite » (0/0). */
+      st = f + "/" + p.elements.length; ko = !p.elements.length || f < p.elements.length; }
     else if(e.id === "final"){ st = (S.signatures.bailleur && S.signatures.locataire) ? ((S.paraphes && S.paraphes.bailleur && S.paraphes.locataire) ? "signé et paraphé" : "signé") : "non signé"; ko = !(S.signatures.bailleur && S.signatures.locataire); }
     var x = document.createElement("button");
     x.innerHTML = past(e.ic || "📋", true) + '<span>' + esc(e.titre) + '</span><span class="st' + (ko ? " ko" : "") + '">' + esc(st) + '</span>';
@@ -1788,7 +1819,18 @@ function charger(txt){
     if(attenteSortie){
       attenteSortie = false;
       if(S.type === "entree"){ basculeSortie(); }
-      else { S.origineSortie = "fichier"; }
+      else {
+        /* Ce fichier est deja une sortie : ses signatures et ses paraphes ont
+           ete recueillis pour un AUTRE constat. Les reprendre ferait porter au
+           document des signatures que personne n'a donnees pour celui-ci. */
+        S.origineSortie = "fichier";
+        S.signatures = {bailleur:"", locataire:""};
+        S.horodatage = {bailleur:"", locataire:""};
+        S.paraphes = {bailleur:"", locataire:""};
+        setTimeout(function(){
+          signale("Ce fichier est déjà un état des lieux de sortie : les signatures qu'il portait n'ont pas été reprises.");
+        }, 600);
+      }
     }
     allerA(0);
   }catch(e){
@@ -1798,7 +1840,12 @@ function charger(txt){
 }
 function versSortie(){
   if(S.type === "sortie"){ alert("Ce document est déjà un état des lieux de sortie."); return; }
-  if(!confirm("Créer l'état des lieux de sortie à partir de celui-ci ? Les états relevés à l'entrée seront gardés en référence et les notes repartiront à vide.")) return;
+  if(!confirm("Créer l'état des lieux de sortie à partir de celui-ci ?\n\n" +
+    "Le fichier de l'entrée va d'abord être enregistré : ce document devient la sortie, et les photos, " +
+    "observations et signatures de l'entrée en sont retirées. Les états relevés à l'entrée restent en référence.")) return;
+  /* Le constat d'entree ne survit pas a la bascule : sans ce fichier, ses
+     photos, ses observations et ses signatures seraient perdues sans retour. */
+  sauver();
   basculeSortie();
   /* Cette sortie est derivee de l'entree ouverte, pas d'un fichier choisi :
      aucune des deux cartes de l'etape 1 ne doit apparaitre selectionnee. */
@@ -1835,9 +1882,9 @@ function docHTML(emp){
   var ns = 4;
   /* Assemble en ignorant les champs vides : sans cela un logement dont le type
      n'est pas renseigne produisait « — 12 rue des Lilas » ou « — non meublé ». */
-  function joint(parties){
+  function joint(parties, sep){
     return parties.filter(function(x){ return x != null && String(x).trim() !== ""; })
-                  .map(function(x){ return esc(x); }).join(" — ");
+                  .map(function(x){ return esc(x); }).join(sep || " — ");
   }
   var h = '<div class="doc-tete"><div><h1>État des lieux ' + (sortie ? "de sortie" : "d'entrée") + '</h1><div>' +
     joint([S.typeLogement, S.adresse, S.ville]) + '</div></div>' +
@@ -1845,7 +1892,7 @@ function docHTML(emp){
 
   h += '<h2>1. Le bien et les parties</h2><table class="kv">' +
     '<tr><td>Logement</td><td>' + joint([S.typeLogement, S.surface ? S.surface + " m²" : "", S.etage, S.meuble === "oui" ? "meublé" : "non meublé"]) + '</td></tr>' +
-    '<tr><td>Adresse</td><td>' + esc(S.adresse) + " " + esc(S.ville) + '</td></tr>' +
+    '<tr><td>Adresse</td><td>' + joint([S.adresse, S.ville], ", ") + '</td></tr>' +
     '<tr><td>Bailleur</td><td>' + joint([S.bailleur.nom, S.bailleur.adresse, S.bailleur.contact]) + '</td></tr>';
   S.locataires.forEach(function(l, i){
     h += '<tr><td>Locataire' + (S.locataires.length > 1 ? " " + (i+1) : "") + '</td><td>' + joint([l.nom, l.adresse, l.contact]) + '</td></tr>';
@@ -1858,11 +1905,11 @@ function docHTML(emp){
   function releve(v, unite){ v = (v == null ? "" : String(v)).trim(); return v ? esc(v) + " " + esc(unite) : ""; }
   S.compteurs.forEach(function(c){
     h += "<tr><td>" + esc(c.libelle) + "</td><td>" + esc(c.numero) + "</td>" +
-      (sortie ? "<td>" + esc(c.indexEntree || "") + "</td>" : "") +
+      (sortie ? "<td>" + releve(c.indexEntree, c.unite) + "</td>" : "") +
       "<td>" + releve(c.index, c.unite) + "</td></tr>";
     if(c.libelle2){
       h += '<tr><td style="padding-left:14px">' + esc(c.libelle) + " — " + esc(c.libelle2) + "</td><td></td>" +
-        (sortie ? "<td>" + esc(c.index2Entree || "") + "</td>" : "") +
+        (sortie ? "<td>" + releve(c.index2Entree, c.unite) + "</td>" : "") +
         "<td>" + releve(c.index2, c.unite) + "</td></tr>";
     }
   });
@@ -1933,7 +1980,9 @@ function docHTML(emp){
   h += '<div class="sig-doc"><div><strong>Le bailleur</strong><br>' + esc(S.bailleur.nom) + "<br>" +
     (sigB ? '<img src="' + sigB + '" alt="">' : "") +
     (sigB && ho.bailleur ? '<div class="quand">Signé le ' + esc(horoISO(ho.bailleur)) + "</div>" : "") + "</div>" +
-    '<div><strong>Le(s) locataire(s)</strong><br>' + esc(S.locataires.map(function(l){ return l.nom; }).join(", ")) + "<br>" +
+    /* joint() ecarte les locataires sans nom : sans cela le bloc de signature
+       se terminait par une virgule flottante (« Marie Dupont, »). */
+    '<div><strong>Le(s) locataire(s)</strong><br>' + joint(S.locataires.map(function(l){ return l.nom; }), ", ") + "<br>" +
     (sigL ? '<img src="' + sigL + '" alt="">' : "") +
     (sigL && ho.locataire ? '<div class="quand">Signé le ' + esc(horoISO(ho.locataire)) + "</div>" : "") + "</div></div>";
 
@@ -2203,13 +2252,24 @@ function repare(o){
   }catch(e){ clearTimeout(secours); go(); }
 })();
 
-/* filet de sécurité : l'application peut être fermée par le système
-   pendant la prise de vue — on écrit dès que la page passe en arrière-plan */
+/* Filet de securite : l'application peut etre fermee par le systeme pendant la
+   prise de vue. L'ecriture dans la base de l'appareil est asynchrone et sa
+   transaction n'a pas toujours le temps d'aboutir quand la page est detruite :
+   les dernieres secondes de saisie etaient alors perdues. On double donc avec
+   une ecriture immediate dans le stockage simple, qui aboutit toujours quand
+   le constat y tient encore (debut de visite, avant les photos). */
+function enregistreVite(){
+  enregistreBrouillon();
+  /* Au-dela de quelques photos, le constat ne tiendrait de toute facon pas
+     dans le stockage simple : inutile d'en payer la conversion en texte, qui
+     porterait sur plusieurs mega-octets a chaque changement d'application. */
+  if(comptePhotos(8) <= 8){ try{ ecritLS(paquetBrouillon()); }catch(e){} }
+}
 document.addEventListener("visibilitychange", function(){
-  if(document.visibilityState === "hidden") enregistreBrouillon();
+  if(document.visibilityState === "hidden") enregistreVite();
 });
-window.addEventListener("pagehide", function(){ enregistreBrouillon(); });
-window.addEventListener("blur", function(){ enregistreBrouillon(); });
+window.addEventListener("pagehide", enregistreVite);
+window.addEventListener("blur", enregistreVite);
 
 /* Une mise a jour ne doit JAMAIS interrompre une visite en cours : le
    rechargement donnait l'impression que l'application se fermait toute seule
