@@ -1,4 +1,4 @@
-# État des lieux — v12.1
+# État des lieux — v12.2
 
 Application d'état des lieux d'entrée et de sortie, utilisable hors ligne sur tablette,
 téléphone ou ordinateur. Tout reste sur l'appareil : aucune donnée n'est envoyée ailleurs.
@@ -7,6 +7,47 @@ téléphone ou ordinateur. Tout reste sur l'appareil : aucune donnée n'est envo
 
 Déposer les 8 fichiers à la racine du dépôt GitHub, puis activer GitHub Pages
 (Settings → Pages → Branch : main / root).
+
+## v12.2 — usage sur tablette et protection du constat
+
+Corrections issues de l'usage réel sur tablette et d'une seconde campagne de
+tests.
+
+**Les boutons Retour et Suivant devenaient inatteignables.** Chrome affiche une
+barre de suggestions en bas de l'écran dès qu'un champ de saisie est touché ;
+opaque, elle recouvrait la barre de navigation et ne repartait plus, bloquant la
+visite à partir de la troisième pièce environ. Les champs n'appellent plus les
+suggestions du navigateur, la barre du bas s'appuie sur la zone réellement
+visible, et le menu propose « Étape suivante » comme passage de secours.
+
+**Les pièces n'étaient pas dans l'ordre.** Elles suivaient l'ordre des clics :
+en ajoutant des pièces en plusieurs fois on obtenait « Entrée 1 à 4, Séjour 1 à
+4, Cuisine 1 à 7, Entrée 5 à 8… ». Elles suivent maintenant l'ordre de la liste
+de composition, et un état des lieux enregistré avant cette correction se remet
+en ordre à l'ouverture.
+
+**« Créer la sortie à partir de l'entrée » détruisait le constat d'entrée.** La
+bascule vide les photos, observations et signatures, et le brouillon est écrasé
+dans la foulée : sans fichier déjà enregistré, l'entrée n'existait plus nulle
+part. Le fichier de l'entrée est désormais enregistré avant la bascule.
+
+**« Reprendre l'entrée » acceptait un fichier de sortie** et en reprenait les
+signatures : le document portait des signatures recueillies pour un autre
+constat. Elles ne sont plus reprises.
+
+**L'application semblait se fermer toute seule.** Une mise en ligne d'une
+nouvelle version la rechargeait en pleine visite. La mise à jour est maintenant
+différée tant qu'un état des lieux est commencé. Par ailleurs, chaque
+enregistrement recopiait tout l'état en mémoire — 8 Mo par frappe de touche sur
+un constat de 40 photos ; cette recopie inutile a été supprimée, et les
+dernières saisies ne sont plus perdues si l'application est fermée brutalement.
+
+**Nom du fichier** : `EDL-entree|sortie-Nom du locataire-Ville`.
+
+Également : le bandeau « Prêt à signer » s'affichait sans nom de locataire ; une
+pièce vidée de ses éléments comptait comme faite ; le titre de l'onglet restait
+figé après deux impressions rapprochées ; débordement horizontal sur écran de
+320 px.
 
 ## v12.1 — relecture complète et corrections
 
