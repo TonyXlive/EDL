@@ -817,7 +817,13 @@ function enregistreBrouillon(cb){
      l'application. Les deux enregistrements font deja leur propre copie :
      la base de l'appareil au moment de l'ecriture, le stockage simple en
      convertissant en texte. */
-  var paquet = {v:1, pas:pas, quand:Date.now(), s:S};
+  /* On note aussi quelle PIECE etait ouverte : si son rang change entre-temps
+     (reclassement d'un ancien enregistrement), on la retrouve par son
+     identifiant plutot que de rouvrir la piece qui occupe desormais ce rang. */
+  var etapeEnCours = etapes()[pas];
+  var piece = (etapeEnCours && etapeEnCours.id === "piece" && S.pieces[etapeEnCours.i])
+    ? S.pieces[etapeEnCours.i].id : "";
+  var paquet = {v:1, pas:pas, piece:piece, quand:Date.now(), s:S};
   ecritBrouillon(paquet, function(ok){
     badge(!!ok);
     if(!ok && Date.now() - (enregistreBrouillon.avert || 0) > 60000){
@@ -943,7 +949,7 @@ function dessine(){
      retrouvait bloquee des qu'on avait saisi un texte. Les valeurs saisies ici
      sont propres au logement visite, elles n'ont rien a gagner d'un carnet
      d'adresses. */
-  els("input,textarea", b).forEach(function(c){
+  els("input,textarea,select", b).forEach(function(c){
     c.setAttribute("autocomplete", "off");
     c.setAttribute("autocorrect", "off");
   });
@@ -1968,31 +1974,44 @@ function docHTML(emp){
    tirets, sinon « Nîmes » devenait « N-mes ». */
 function propre(s, max){
   return String(s == null ? "" : s)
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, max);
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   /* \u00ab N\u00eemes \u00bb -> \u00ab Nimes \u00bb */
+    /* On n'ecarte que ce qui est interdit ou genant dans un nom de fichier :
+       un nom ecrit dans un autre alphabet doit rester lisible, sinon tous les
+       constats d'un meme locataire finissaient par s'appeler \u00ab EDL-entree \u00bb. */
+    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]+/g, " ")
+    .replace(/[\s.,;]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .slice(0, max)
+    .replace(/^-+|-+$/g, "");
 }
 function nomDoc(){
   var locataire = propre(S.locataires[0] && S.locataires[0].nom, 40);
   /* La ville plutot que l'adresse : un nom de fichier plus court et plus
      lisible. On retombe sur l'adresse si la ville n'est pas renseignee. */
   var lieu = propre(S.ville || S.adresse, 48);
-  return ["EDL", (S.type === "sortie" ? "sortie" : "entree"), locataire, lieu]
-    .filter(function(x){ return x; }).join("-");
+  var bouts = ["EDL", (S.type === "sortie" ? "sortie" : "entree"), locataire, lieu]
+    .filter(function(x){ return x; });
+  /* Sans locataire ni lieu, la date evite que tous les constats portent le
+     meme nom et s'ecrasent les uns les autres. */
+  if(!locataire && !lieu) bouts.push(S.date);
+  return bouts.join("-");
 }
 /* Vrai pendant une impression lancee par « Terminer » : le document est alors
    deja rendu avec son empreinte, il ne faut pas le regenerer sans elle. */
 var enImpression = false;
+/* Titre d'origine retenu une fois pour toutes : le relire au moment d'imprimer
+   faisait qu'une seconde impression lancee trop vite memorisait le nom de
+   fichier de la premiere, et l'onglet gardait ce nom definitivement. */
+var titreOrigine = document.title;
 function imprimer(){
+  if(enImpression) return;                 /* une impression est deja engagee */
+  enImpression = true;
   empreinte(function(emp){
-    enImpression = true;
     el("#impression").innerHTML = docHTML(emp);
-    var titre = document.title;
     document.title = nomDoc();
     setTimeout(function(){
       window.print();
-      setTimeout(function(){ document.title = titre; enImpression = false; }, 1500);
+      setTimeout(function(){ document.title = titreOrigine; enImpression = false; }, 1500);
     }, 120);
   });
 }
@@ -2009,6 +2028,10 @@ function fermeApercu(){
   document.body.classList.remove("fige");
 }
 function terminer(){
+  /* Deux appuis rapproches enregistraient le fichier deux fois. */
+  if(enImpression || terminer.enCours) return;
+  terminer.enCours = true;
+  setTimeout(function(){ terminer.enCours = false; }, 2500);
   sauver();
   var manque = !S.signatures.bailleur || !S.signatures.locataire;
   signale(manque
@@ -2035,8 +2058,11 @@ function ajusteBas(){
     document.documentElement.style.setProperty("--fond", cache + "px");
     var nav = el(".nav"), m = el("main");
     if(nav && m){
+      /* La reserve doit couvrir la barre ET la hauteur masquee : la barre
+         etant remontee de `cache`, sans cela le bas de l'etape ne pouvait
+         plus etre amene au-dessus d'elle quand le clavier etait ouvert. */
       var h = Math.ceil(nav.getBoundingClientRect().height);
-      if(h) m.style.paddingBottom = (h + 26) + "px";
+      if(h) m.style.paddingBottom = (h + 26 + cache) + "px";
     }
   });
 }
@@ -2162,6 +2188,11 @@ function repare(o){
           var etp = etapes();
           var np = (r && typeof r.pas === "number") ? r.pas : 0;
           pas = Math.max(0, Math.min(np, etp.length - 1));
+          if(r && r.piece){
+            for(var i = 0; i < etp.length; i++){
+              if(etp[i].id === "piece" && S.pieces[etp[i].i] && S.pieces[etp[i].i].id === r.piece){ pas = i; break; }
+            }
+          }
           if(S.adresse || S.pieces.length){
             setTimeout(function(){ signale("Reprise automatique : tout a été retrouvé."); }, 500);
           }
